@@ -1,6 +1,5 @@
 Cats Effect
 ---
----
 
 ### IO
 
