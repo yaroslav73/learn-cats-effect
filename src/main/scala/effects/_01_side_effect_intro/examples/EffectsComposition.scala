@@ -1,6 +1,9 @@
-package effects._01_side_effect_intro
+package effects._01_side_effect_intro.examples
 
-object _03_EffectsComposition extends App {
+import effects._01_side_effect_intro.MyIO
+
+object EffectsComposition extends App {
+  // Be careful! Composing effects must not execute them.
   val hello = MyIO.putStr("Hello")
   val effects = MyIO.putStr("Effects")
 
@@ -16,10 +19,10 @@ object _03_EffectsComposition extends App {
   val three = MyIO(() => 3)
 
   (for {
-    o <- one
-    t <- two
-    th <- three
-    res = o - t - th
+    one <- one
+    two <- two
+    three <- three
+    res = one + two + three
     _ <- MyIO.putStr(s"Result: $res")
   } yield ()).unsafeRun()
 }
