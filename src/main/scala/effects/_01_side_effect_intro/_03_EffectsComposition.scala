@@ -10,4 +10,16 @@ object _03_EffectsComposition extends App {
   } yield ()
 
   result.unsafeRun()
+
+  val one = MyIO(() => 1)
+  val two = MyIO(() => 2)
+  val three = MyIO(() => 3)
+
+  (for {
+    o <- one
+    t <- two
+    th <- three
+    res = o - t - th
+    _ <- MyIO.putStr(s"Result: $res")
+  } yield ()).unsafeRun()
 }
