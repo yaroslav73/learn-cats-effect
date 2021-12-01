@@ -9,8 +9,10 @@ object debug {
     def debug: IO[A] =
       for {
         a <- ioa
-        thread = Thread.currentThread.getName
-        _ = println(s"[${LocalTime.now}, ${Console.GREEN + thread + Console.RESET}]: $a")
+        t = Thread.currentThread.getName
+        g = Console.GREEN
+        r = Console.RESET
+        _ = println(s"[${LocalTime.now}, $g$t$r]: $a")
       } yield a
   }
 }
