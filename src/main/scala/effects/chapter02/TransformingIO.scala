@@ -19,4 +19,11 @@ object TransformingIO extends App {
   } yield s"$j, $k"
 
   println(result.unsafeRunSync())
+
+  val twentyOne = IO(21)
+  val asResult = twentyOne.as("Twenty One")
+  val voidResult = asResult.void
+
+  println(asResult.unsafeRunSync())
+  println(s"This is void result: ${voidResult.unsafeRunSync()}")
 }
