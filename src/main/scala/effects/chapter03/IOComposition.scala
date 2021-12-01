@@ -3,7 +3,7 @@ package effects.chapter03
 import cats.effect._
 import cats.implicits._
 
-object _01_IOComposition extends App {
+object IOComposition extends App {
   val hello = IO(println(s"[${Thread.currentThread().getName}]: Hello"))
   val world = IO(println(s"[${Thread.currentThread().getName}]: World"))
 

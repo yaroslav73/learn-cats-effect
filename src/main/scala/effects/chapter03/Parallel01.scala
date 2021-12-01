@@ -4,7 +4,8 @@ import cats.effect._
 import cats.implicits._
 import scala.concurrent.ExecutionContext
 
-object _02_Parallel01 extends App {
+object Parallel01 extends App {
+  // ContextShift[IO] to be able to switch computations to different threads.
   implicit val contextShift: ContextShift[IO] =
     IO.contextShift(ExecutionContext.global)
 

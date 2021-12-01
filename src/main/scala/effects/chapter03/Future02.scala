@@ -4,9 +4,10 @@ import cats.implicits._
 import scala.concurrent._
 import scala.concurrent.duration._
 
-object _01_Future02 extends App {
+object Future02 extends App {
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
 
+  // Here using method instead val as in Future01.
   def hello = Future(println(s"[${Thread.currentThread().getName}]: Hello"))
   def world = Future(println(s"[${Thread.currentThread().getName}]: World"))
 
@@ -20,4 +21,11 @@ object _01_Future02 extends App {
   val hw02 = (hello, world).mapN((_, _) => ())
 
   Await.ready(hw02, 5.seconds)
+
+  val hw03 = (
+    Future(println(s"[${Thread.currentThread().getName}]: Hello")),
+    Future(println(s"[${Thread.currentThread().getName}]: World"))
+  ).mapN((_, _) => ())
+
+  Await.ready(hw03, 5.seconds)
 }

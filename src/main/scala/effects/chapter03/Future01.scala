@@ -4,7 +4,7 @@ import cats.implicits._
 import scala.concurrent._
 import scala.concurrent.duration._
 
-object _01_Future01 extends App {
+object Future01 extends App {
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
 
   val hello = Future(println(s"[${Thread.currentThread().getName}]: Hello"))
