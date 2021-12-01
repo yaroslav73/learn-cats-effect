@@ -1,6 +1,6 @@
-package effects._01_side_effect_intro.exercise
+package effects.chapter01.exercise
 
-import effects._01_side_effect_intro.MyIO
+import effects.chapter01.MyIO
 
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.FiniteDuration

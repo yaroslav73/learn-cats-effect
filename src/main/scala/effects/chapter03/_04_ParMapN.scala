@@ -1,4 +1,4 @@
-package effects._03_parallel_execution
+package effects.chapter03
 
 import cats.effect._
 import cats.implicits._

@@ -1,9 +1,9 @@
-package effects._02_cats_effect_io
+package effects.chapter02
 
 import cats.effect.IO
 import cats.implicits._
 
-object _02_TransformingIO extends App {
+object TransformingIO extends App {
   val thirteen = IO(12).map(_ + 1)
 
   println(thirteen.unsafeRunSync())

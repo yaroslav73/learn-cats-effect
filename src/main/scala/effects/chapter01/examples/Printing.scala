@@ -1,6 +1,6 @@
-package effects._01_side_effect_intro.examples
+package effects.chapter01.examples
 
-import effects._01_side_effect_intro.MyIO
+import effects.chapter01.MyIO
 
 object Printing extends App {
   // Describe the printing of "hello!" as a MyIO value.

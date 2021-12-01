@@ -1,14 +1,19 @@
-package effects._03_parallel_execution
+package effects.chapter03
 
 import cats.effect._
 import cats.implicits._
 import scala.concurrent.ExecutionContext
 
 object _02_Parallel01 extends App {
-  implicit val contextShift: ContextShift[IO] = IO.contextShift(ExecutionContext.global)
+  implicit val contextShift: ContextShift[IO] =
+    IO.contextShift(ExecutionContext.global)
 
-  val hello: IO[Unit] = IO(println(s"[${Thread.currentThread().getName}]: Hello"))
-  val world: IO[Unit] = IO(println(s"[${Thread.currentThread().getName}]: World"))
+  val hello: IO[Unit] = IO(
+    println(s"[${Thread.currentThread().getName}]: Hello")
+  )
+  val world: IO[Unit] = IO(
+    println(s"[${Thread.currentThread().getName}]: World")
+  )
 
   val helloPar = IO.Par(hello)
   val worldPar = IO.Par(world)

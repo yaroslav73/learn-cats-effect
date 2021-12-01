@@ -1,4 +1,4 @@
-package effects._03_parallel_execution
+package effects.chapter03
 
 import cats.implicits._
 import scala.concurrent._

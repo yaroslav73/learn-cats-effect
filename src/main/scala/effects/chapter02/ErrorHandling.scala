@@ -1,9 +1,9 @@
-package effects._02_cats_effect_io
+package effects.chapter02
 
 import cats.effect.IO
 import cats.implicits._
 
-object _03_ErrorHandling extends App {
+object ErrorHandling extends App {
   val defaultIntValue = 13
 
   val ioWithError = IO.raiseError[Int](new RuntimeException("Oh, no..."))
@@ -13,7 +13,8 @@ object _03_ErrorHandling extends App {
 
   println(handleIOWithError.unsafeRunSync())
 
-  val handleWithError: IO[Int] = ioWithError.handleErrorWith(t => IO.raiseError(new OtherException(t)))
+  val handleWithError: IO[Int] =
+    ioWithError.handleErrorWith(t => IO.raiseError(new OtherException(t)))
   val sameAsAbove02 = ioWithError.adaptError(t => new OtherException(t))
 
   val result: IO[Either[Throwable, Int]] =

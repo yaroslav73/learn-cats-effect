@@ -1,4 +1,4 @@
-package effects._01_side_effect_intro
+package effects.chapter01
 
 case class MyIO[A](unsafeRun: () => A) {
   def map[B](f: A => B): MyIO[B] =

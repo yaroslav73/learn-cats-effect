@@ -1,4 +1,4 @@
-package effects._03_parallel_execution
+package effects.chapter03
 
 import cats.effect._
 import cats.implicits._
@@ -12,8 +12,6 @@ object _04_ParSequence extends IOApp {
   def task(id: Int): IO[Int] = IO(id + 100).debug
 
   override def run(args: List[String]): IO[ExitCode] =
-    tasks
-      .parSequence
-      .debug
+    tasks.parSequence.debug
       .as(ExitCode.Success)
 }

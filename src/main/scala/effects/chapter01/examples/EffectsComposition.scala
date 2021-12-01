@@ -1,6 +1,6 @@
-package effects._01_side_effect_intro.examples
+package effects.chapter01.examples
 
-import effects._01_side_effect_intro.MyIO
+import effects.chapter01.MyIO
 
 object EffectsComposition extends App {
   // Be careful! Composing effects must not execute them.
