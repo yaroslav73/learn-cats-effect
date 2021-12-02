@@ -6,7 +6,7 @@ import effects.debug._
 
 import scala.concurrent.duration._
 
-object ParMapNExample extends IOApp {
+object ParMapN extends IOApp {
   private val hello = IO("Hello").debug
   private val world = IO("World").debug
   private val lastChar = IO("!").delayBy(3.seconds).debug

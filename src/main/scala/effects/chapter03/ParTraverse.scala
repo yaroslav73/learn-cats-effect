@@ -6,7 +6,12 @@ import effects.debug._
 
 import scala.concurrent.duration._
 
-object _04_ParTraverse extends IOApp {
+// The most common use case of (par)traverse
+// is when you have a collection of work to be done,
+// and a function which handles one unit of work.
+// Then you get a collection of results combined into one effect.
+// (par)traverse signature - F[A] => (A => G[B]) => G[F[B]]
+object ParTraverse extends IOApp {
 
   val numTasks = 20
   val tasks: List[Int] = List.range(0, numTasks)

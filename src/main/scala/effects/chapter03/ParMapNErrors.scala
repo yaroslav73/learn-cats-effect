@@ -6,7 +6,7 @@ import effects.debug._
 
 import scala.concurrent.duration._
 
-object ParMapNErrorsExample extends IOApp {
+object ParMapNErrors extends IOApp {
   private val ok = IO("Hi!").debug
   private val ko1 =
     IO.sleep(1.second).as("ko1").debug *>
