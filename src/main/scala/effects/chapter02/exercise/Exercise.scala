@@ -5,6 +5,7 @@ import cats.implicits._
 
 import java.time.LocalTime
 import scala.concurrent.duration.DurationInt
+import effects.debug._
 
 object Exercise extends IOApp {
   def run(args: List[String]): IO[ExitCode] =
@@ -16,7 +17,7 @@ object Exercise extends IOApp {
   // And how do you do this repeatedly?
   val tickingClock: IO[Unit] = for {
     _ <- IO.sleep(1.seconds)
-    _ <- IO(println(s"Now is: ${LocalTime.now()}"))
+    _ <- IO(s"Now is: ${LocalTime.now()}").debug
     _ <- tickingClock
   } yield ()
 

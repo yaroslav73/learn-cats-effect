@@ -5,7 +5,7 @@ import cats.implicits._
 import effects.debug._
 
 object Parallelism extends IOApp {
-  override def run(args: List[String]): IO[ExitCode] =
+  def run(args: List[String]): IO[ExitCode] =
     for {
       _ <- IO(s"Number of CPUs: $numCPUs").debug
       _ <- tasks.debug
