@@ -22,9 +22,9 @@ object Job {
   }
 
   final case class Running(
-      id: Id,
-      fiber: Fiber[IO, Unit],
-      exitCase: Deferred[IO, ExitCase[Throwable]]
+    id: Id,
+    fiber: Fiber[IO, Unit],
+    exitCase: Deferred[IO, ExitCase[Throwable]]
   ) extends Job {
     def await: IO[Completed] = exitCase.get.map(Completed(id, _))
   }
