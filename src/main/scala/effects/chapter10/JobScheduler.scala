@@ -25,5 +25,17 @@ object JobScheduler {
   ) {
     def enqueue(job: Job.Scheduled): State =
       copy(scheduled = scheduled :+ job)
+
+    def dequeue: (State, Option[Job.Scheduled]) =
+      scheduled.deleteFirst(_ => scheduled.nonEmpty && running.sizeIs <= maxRunning) match {
+        case Some((job, chain)) => copy(scheduled = chain) -> Some(job)
+        case None               => this -> None
+      }
+
+    def running(job: Job.Running): State =
+      copy(running = running + (job.id -> job))
+
+    def onComplete(job: Job.Completed): State =
+      copy(running = running.removed(job.id), completed = completed :+ job)
   }
 }
