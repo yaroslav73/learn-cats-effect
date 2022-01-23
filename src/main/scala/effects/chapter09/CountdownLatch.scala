@@ -25,7 +25,7 @@ object CountdownLatch {
           case Done                     => IO.unit
         }
 
-      override def decrement: IO[Unit] =
+      def decrement: IO[Unit] =
         state
           .modify {
             case Outstanding(1, whenDone) => Done -> whenDone.complete(())
