@@ -22,6 +22,6 @@ lazy val courses = project
     scalaVersion := scala3Version,
     libraryDependencies ++= Seq(
       "org.typelevel" %% "cats-effect" % "3.3.12",
+      "org.scalatest" %% "scalatest" % "3.2.12" % "test"
     )
   )
-
