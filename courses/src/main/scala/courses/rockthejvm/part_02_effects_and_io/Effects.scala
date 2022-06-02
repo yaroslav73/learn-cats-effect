@@ -55,9 +55,17 @@ object Effects extends App {
   final case class _IO[A](unsafeRun: () => A) {
     def map[B](f: A => B): _IO[B] = _IO(() => f(unsafeRun()))
 
-    // TODO: what happened if I do not execute second time
+    // What happened if I do not execute second time, like this f(unsafeRun())?
+    // Yes, result type is the same, but behavior is different.
+    // f(unsafeRun()) is execute () => A, and return new _IO build by f
+    // In case _IO(() => f(unsafeRun()).unsafeRun()) we construct new _IO, but does not execute it.
     def flatMap[B](f: A => _IO[B]): _IO[B] = _IO(() => f(unsafeRun()).unsafeRun())
   }
+
+  var a = 0
+  // Until call .unsafeRun() nothing happens and a still 0
+  _IO(() => { a += 1 ; println(s"1. a is $a") }).flatMap(_ => _IO(() => { a += 1 ; println(s"2. a is $a") }))
+  println(a)
 
   val ioInt: _IO[Int] = _IO { () =>
     println("Something execution...")
@@ -80,12 +88,25 @@ object Effects extends App {
     } yield end - start
 
   // Decompile the measure:
-  // time.flatMap(start => computation.flatMap(_ => time.map(end => end - start)))
-  // time.map(end => end - start) == _IO(() => time.unsafeRun() - start)
-  //                                 _IO(() => _IO(() => System.currentTimeMillis).unsafeRun() - start)
+  // time.flatMap(start => computation.flatMap(_ => time.map(end => end - start))):
+  // time.map(end => end - start) == _IO(() => time.unsafeRun() - start) ==
+  //                                 _IO(() => _IO(() => System.currentTimeMillis).unsafeRun() - start) ==
   //                                 _IO(() => System.currentTimeMillis - start)
-  // computation.flatMap(_ => _IO(() => System.currentTimeMillis - start)) ==
-  //  computation.flatMap(lambda) == _IO(() => computation.unsafeRun())
+  // computation.flatMap(_ => _IO(() => System.currentTimeMillis - start)) == computation.flatMap(lambda) ==
+  //                                                                          _IO(() => computation.unsafeRun()) ==
+  //                                                                          _IO(() => computed value)
+  // time.flatMap(start => computation.flatMap(_ => time.map(end => end - start))) ==
+  //    time.flatMap(start => lambda) == _IO(() => time.unsafeRun()) ==
+  //                                      _IO(() => _IO(() => System.currentTimeMillis).unsafeRun()) ==
+  //                                      _IO(() => System.currentTimeMillis)
+  // And after unsafeRun() it's looks like:
+  // _IO(() => System.currentTimeMillis).flatMap { start =>
+  //    _IO(() => computed value).flatMap { _ =>
+  //        _IO(() => System.currentTimeMillis).map { end =>
+  //            end - start
+  //        }
+  //    }
+  // }
 
   def testMeasure(): Unit = {
     val test = measure(_IO(() => Thread.sleep(1000)))
