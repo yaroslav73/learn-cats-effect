@@ -5,7 +5,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.matchers.should.Matchers
 
 class IntroExercisesTests extends AnyWordSpec with Matchers {
-  import IntroExercises._
+  import courses.rockthejvm.part_02_effects_and_io.exercises.IntroExercises._
   import cats.effect.unsafe.implicits.global
 
   "takeLast should discard first effect" in {

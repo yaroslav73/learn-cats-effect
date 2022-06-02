@@ -1,4 +1,4 @@
-package courses.exercises
+package courses.rockthejvm.part_02_effects_and_io.exercises
 
 import cats.effect.IO
 import cats.Eval
