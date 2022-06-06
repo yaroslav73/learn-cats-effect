@@ -49,7 +49,19 @@ object FibersExercises extends IOApp.Simple {
   //      - the original value if the computation is successful before the timeout signal
   //      - the exception if the computation is failed before the timeout signal
   //      - a RuntimeException if it times out (i.e. cancelled by the timeout)
-  def timeout[A](io: IO[A], timeout: FiniteDuration): IO[A] = ???
+  def timeout[A](io: IO[A], timeout: FiniteDuration): IO[A] = {
+    val result = for {
+      fa <- io.start
+      _  <- IO.sleep(timeout) *> fa.cancel
+      a  <- fa.join
+    } yield a
+
+    result.flatMap {
+      case Outcome.Succeeded(fa) => fa
+      case Outcome.Errored(e)    => IO.raiseError(e)
+      case Outcome.Canceled()    => IO.raiseError(new RuntimeException("IO was cancel."))
+    }
+  }
 
   override def run: IO[Unit] = {
     val successOneIO = IO("Success IO")
@@ -57,6 +69,6 @@ object FibersExercises extends IOApp.Simple {
     val failedIO     = IO.raiseError(new IllegalArgumentException("Wrong number!"))
     val cancelledIO  = IO.canceled
 
-    tupleIOs(successOneIO, successTwoIO).debug.void
+    timeout(successTwoIO *> IO.sleep(2.seconds), 1.second).debug.void
   }
 }
