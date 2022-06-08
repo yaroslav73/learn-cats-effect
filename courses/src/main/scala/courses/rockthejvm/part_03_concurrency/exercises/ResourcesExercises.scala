@@ -21,22 +21,18 @@ object ResourcesExercises extends IOApp.Simple {
   def openFileScanner(path: String): IO[Scanner] =
     IO(new Scanner(new FileReader(new File(path))))
 
+  def readLineByLine(scanner: Scanner): IO[Unit] =
+    if (scanner.hasNextLine) IO(scanner.nextLine()).debug >> IO.sleep(100.millis) >> readLineByLine(scanner)
+    else IO.unit
+
   def bracketReadFile(path: String): IO[Unit] =
-    for {
-      fiber <- openFileScanner(path)
-        .bracket(scan =>
-          IO {
-            while (scan.hasNextLine)
-              println(scan.nextLine())
-              Thread.sleep(100)
-          }
-        )(scan => IO(scan.close()) *> IO("scanner closed...").debug.void)
-        .start
-    } yield ()
+    IO(s"Opening file $path").debug *>
+      openFileScanner(path)
+        .bracket(scanner => readLineByLine(scanner))(scanner =>
+          IO(s"Closed scanner for file $path").debug *> IO(scanner.close())
+        )
 
-  val pathToFile =
-    "courses/src/main/scala/courses/rockthejvm/part_03_concurrency/exercises/ResourcesExercises.scala"
+  val pathToFile = "courses/src/main/scala/courses/rockthejvm/part_03_concurrency/exercises/ResourcesExercises.scala"
 
-  override def run: IO[Unit] =
-    bracketReadFile(pathToFile) *> IO.sleep(10000.millis)
+  override def run: IO[Unit] = bracketReadFile(pathToFile)
 }
