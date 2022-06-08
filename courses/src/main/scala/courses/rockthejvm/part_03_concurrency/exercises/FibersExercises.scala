@@ -64,11 +64,16 @@ object FibersExercises extends IOApp.Simple {
   }
 
   override def run: IO[Unit] = {
+    val linesIO      = IO(println("----------------------------------------------------"))
     val successOneIO = IO("Success IO")
     val successTwoIO = IO(73)
     val failedIO     = IO.raiseError(new IllegalArgumentException("Wrong number!"))
     val cancelledIO  = IO.canceled
 
-    timeout(successTwoIO *> IO.sleep(2.seconds), 1.second).debug.void
+    processResultsFromFiber(successOneIO).debug *>
+      linesIO *>
+      tupleIOs(successOneIO, successTwoIO) *>
+      linesIO *>
+      timeout(successTwoIO *> IO.sleep(2.seconds), 1.second).debug.void
   }
 }
