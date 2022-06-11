@@ -1,11 +1,10 @@
 package courses.rockthejvm.part_03_concurrency.exercises
 
-import cats.effect.{IO, IOApp}
+import cats.effect.{IO, IOApp, Resource}
 import cats.effect.kernel.Outcome
 
 import java.io.{File, FileReader}
 import java.util.Scanner
-
 import scala.concurrent.duration.DurationInt
 
 object ResourcesExercises extends IOApp.Simple {
@@ -32,7 +31,25 @@ object ResourcesExercises extends IOApp.Simple {
           IO(s"Closed scanner for file $path").debug *> IO(scanner.close())
         )
 
-  val pathToFile = "courses/src/main/scala/courses/rockthejvm/part_03_concurrency/exercises/ResourcesExercises.scala"
+  // Exercise:
+  // same as above, but using Resource instead of Bracket.
+  def resourceFromFile(path: String): Resource[IO, Scanner] =
+    Resource
+      .make(openFileScanner(path))(scanner => IO(s"Closed scanner for file: $path").debug >> IO(scanner.close()))
 
-  override def run: IO[Unit] = bracketReadFile(pathToFile)
+  def resourceReadFile(path: String): IO[Unit] =
+    IO(s"Opening file: $path...").debug >>
+      resourceFromFile(path).use(readLineByLine)
+
+  def cancelReadFile(path: String): IO[Unit] =
+    for {
+      fiber <- resourceReadFile(path).start
+      _     <- IO.sleep(2.seconds) >> fiber.cancel
+    } yield ()
+
+  override def run: IO[Unit] = {
+    val pathToFile = "courses/src/main/scala/courses/rockthejvm/part_03_concurrency/exercises/ResourcesExercises.scala"
+
+    cancelReadFile(pathToFile)
+  }
 }
