@@ -49,4 +49,30 @@ object RaceExercises {
           case Outcome.Canceled()    => IO.raiseError(new RuntimeException("computation canceled"))
         })
     }
+
+  def simpleRaceAnswer[A, B](ioa: IO[A], iob: IO[B]): IO[Either[A, B]] =
+    IO.racePair(ioa, iob).flatMap {
+      case Left((outcomeA, fiberB)) =>
+        outcomeA match {
+          case Outcome.Succeeded(effectA) => fiberB.cancel >> effectA.map(a => Left(a))
+          case Outcome.Errored(e)         => fiberB.cancel >> IO.raiseError(e)
+          case Outcome.Canceled() =>
+            fiberB.join.flatMap {
+              case Outcome.Succeeded(effectB) => effectB.map(b => Right(b))
+              case Outcome.Errored(e)         => IO.raiseError(e)
+              case Outcome.Canceled()         => IO.raiseError(new RuntimeException("Both computation canceled"))
+            }
+        }
+      case Right((fiberA, outcomeB)) =>
+        outcomeB match {
+          case Outcome.Succeeded(effectB) => fiberA.cancel >> effectB.map(b => Right(b))
+          case Outcome.Errored(e)         => fiberA.cancel >> IO.raiseError(e)
+          case Outcome.Canceled() =>
+            fiberA.join.flatMap {
+              case Outcome.Succeeded(effectA) => effectA.map(a => Left(a))
+              case Outcome.Errored(e)         => IO.raiseError(e)
+              case Outcome.Canceled()         => IO.raiseError(new RuntimeException("Both computation canceled"))
+            }
+        }
+    }
 }
