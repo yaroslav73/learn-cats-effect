@@ -57,7 +57,7 @@ object CancellingIO extends IOApp.Simple {
 
   val authFlow: IO[Unit] = IO.uncancelable { poll =>
     for {
-       // This is cancelable again, because using poll(...)
+      // This is cancelable again, because using poll(...)
       password <- poll(inputPassword).onCancel(IO("Authentication timeout. Try again later.").debug.void)
       verified <- verifyPassword(password)
       _        <- if (verified) IO("Authentication successful.").debug else IO("Authentication failed.").debug
