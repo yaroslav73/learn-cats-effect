@@ -1,5 +1,6 @@
 package courses.rockthejvm.part_04_concurrent_coordination.exercises
 
+import cats.syntax.either.*
 import cats.syntax.parallel.*
 import cats.effect.IO
 import cats.effect.IOApp
@@ -7,6 +8,11 @@ import cats.effect.kernel.Ref
 import cats.effect.kernel.Deferred
 
 import scala.concurrent.duration.DurationInt
+import cats.effect.kernel.Outcome
+import cats.effect.kernel.Fiber
+import cats.effect.kernel.Outcome.Succeeded
+import cats.effect.kernel.Outcome.Errored
+import cats.effect.kernel.Outcome.Canceled
 
 object DeferredExercises extends IOApp.Simple {
   import courses.rockthejvm.utils.*
@@ -30,7 +36,7 @@ object DeferredExercises extends IOApp.Simple {
         n <- counter.updateAndGet(_ + 1)
         _ <- IO(s"[increment]: $n").debug
         _ <- IO.sleep(1.second)
-        _ <- if (n == 10) deferred.complete(n) else increment(counter, deferred)
+        _ <- if (n >= 10) deferred.complete(n) else increment(counter, deferred)
       } yield ()
 
     def notifier(deferred: Deferred[IO, Int]): IO[Unit] =
@@ -47,5 +53,36 @@ object DeferredExercises extends IOApp.Simple {
     } yield ()
   }
 
-  def run: IO[Unit] = timer
+  type RaceResult[A, B] = Either[
+    (Outcome[IO, Throwable, A], Fiber[IO, Throwable, B]),
+    (Fiber[IO, Throwable, A], Outcome[IO, Throwable, B])
+  ]
+
+  type EitherOutcome[A, B] = Either[Outcome[IO, Throwable, A], Outcome[IO, Throwable, B]]
+
+  def racePair[A, B](ioa: IO[A], iob: IO[B]): IO[RaceResult[A, B]] = {
+    IO.uncancelable { poll =>
+      for {
+        deferred <- Deferred[IO, EitherOutcome[A, B]]
+        _        <- deferred.get
+        fiberA   <- ioa.guaranteeCase(outcomeA => deferred.complete(Left(outcomeA)).void).start
+        fiberB   <- iob.guaranteeCase(outcomeB => deferred.complete(Right(outcomeB)).void).start
+        result <- poll(deferred.get).onCancel { // Blocking call - should be cancelable.
+          for {
+            cancalingFiberA <- fiberA.cancel.start
+            cancalingFiberB <- fiberB.cancel.start
+            _               <- cancalingFiberA.join
+            _               <- cancalingFiberB.join
+          } yield ()
+        }
+      } yield {
+        result match {
+          case Left(outcomeA)  => Left(outcomeA, fiberB)
+          case Right(outcomeB) => Right(fiberA, outcomeB)
+        }
+      }
+    }
+  }
+
+  def run: IO[Unit] = racePair(IO(""), IO(13)).void
 }
