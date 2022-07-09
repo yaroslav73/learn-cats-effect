@@ -2,7 +2,7 @@ package books.essential.effects.chapter02
 
 import cats.effect.{ExitCode, IO, IOApp}
 
-object IOApp extends IOApp {
+object IOAppExample extends IOApp {
   // The application executes them when we run it.
   override def run(args: List[String]): IO[ExitCode] = {
     // Declare the computations that will be run.
