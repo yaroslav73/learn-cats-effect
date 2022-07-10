@@ -29,9 +29,8 @@ object MutexExercises extends IOApp.Simple {
 
     def createSignal: IO[Signal] = Deferred[IO, Unit]
 
-    def create: IO[Mutex] = Ref[IO].of(unlocked).map(answer)
+    def create: IO[Mutex] = Ref[IO].of(unlocked).map(solution)
 
-    // TODO: try to update with modify.
     def solution(state: Ref[IO, State]): Mutex = {
       new Mutex {
 
@@ -42,10 +41,13 @@ object MutexExercises extends IOApp.Simple {
         def acquire: IO[Unit] =
           for {
             d <- Deferred[IO, Unit]
-            s <- state.get
-            _ <-
-              if (s.locked) state.update(s => State(locked = true, s.waiting :+ d)) *> d.get
-              else state.set(State(locked = true, Queue.empty))
+            _ <- state.modify {
+              case State(false, _)    => State(locked = true, Queue.empty)      -> IO.unit
+              case State(true, queue) => State(locked = true, queue.enqueue(d)) -> d.get
+            }.flatten
+            // _ <-
+            // if (s.locked) state.modify(s => State(locked = true, s.waiting.enqueue(d)) -> d.get)
+            // else state.modify(s => State(locked = true, Queue.empty) -> IO.unit)
           } yield ()
 
         /** Change the state of the Ref:
@@ -60,9 +62,13 @@ object MutexExercises extends IOApp.Simple {
             s <- state.get
             _ <-
               if (s.locked) {
-                if (s.waiting.isEmpty) state.update(_ => State(locked = false, s.waiting))
-                else s.waiting.head.complete(()) >> state.update(_ => State(locked = true, s.waiting.tail))
-              } else state.update(_ => State(locked = false, s.waiting))
+                if (s.waiting.isEmpty) state.modify(s => State(locked = false, Queue.empty) -> IO.unit).flatten
+                else
+                  state.modify { s =>
+                    val (head, tail) = s.waiting.dequeue
+                    State(locked = true, tail) -> head.complete(()).void
+                  }.flatten
+              } else state.modify(s => State(locked = false, Queue.empty) -> IO.unit).flatten
           } yield ()
       }
     }
