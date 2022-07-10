@@ -84,5 +84,5 @@ object DeferredExercises extends IOApp.Simple {
     }
   }
 
-  def run: IO[Unit] = timer //racePair(IO(""), IO(13)).void
+  def run: IO[Unit] = racePair(IO(""), IO(13)).void
 }
