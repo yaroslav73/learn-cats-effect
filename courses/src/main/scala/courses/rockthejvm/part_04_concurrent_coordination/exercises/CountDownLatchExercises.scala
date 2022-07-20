@@ -42,6 +42,29 @@ object CountDownLatchExercises extends IOApp.Simple {
     }
   }
 
+  object CDLAnswer {
+    sealed trait State
+    case object Done                                              extends State
+    final case class Live(count: Int, signal: Deferred[IO, Unit]) extends State
+
+    def apply(count: Int): IO[CountDownLatch] =
+      for {
+        signal <- Deferred[IO, Unit]
+        state  <- Ref[IO].of[State](Live(count, signal))
+      } yield new CountDownLatch {
+        def await: IO[Unit] = state.get.flatMap { s =>
+          if (s == Done) IO.unit // Continue, the latch is dead
+          else signal.get        // Back here
+        }
+
+        def release: IO[Unit] = state.modify {
+          case Done            => Done                -> IO.unit
+          case Live(1, signal) => Done                -> signal.complete(()).void
+          case Live(n, signal) => Live(n - 1, signal) -> IO.unit
+        }.flatten
+      }
+  }
+
   def announcer(latch: CountDownLatch): IO[Unit] =
     for {
       _ <- IO("The race will starts soon...").debug >> IO.sleep(2.seconds)

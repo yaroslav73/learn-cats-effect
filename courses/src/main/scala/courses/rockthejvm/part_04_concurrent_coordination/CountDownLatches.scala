@@ -116,6 +116,6 @@ object CountDownLatches extends IOApp.Simple {
     } yield ()
 
   override def run: IO[Unit] =
-    sprint
-    // downloadFile("example.txt", "courses/src/main/resources")
+    // sprint
+    downloadFile("example.txt", "courses/src/main/resources")
 }
