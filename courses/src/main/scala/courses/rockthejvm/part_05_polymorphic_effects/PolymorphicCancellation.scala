@@ -82,25 +82,25 @@ object PolymorphicCancellation extends IOApp.Simple {
   // Generalize a pice of code
 
   def unsafeSleep[F[_], E](duration: FiniteDuration)(using mc: MonadCancel[F, E]): F[Unit] =
-    mc.pure(Thread.sleep(duration.toMillis))
+    mc.pure(Thread.sleep(duration.toMillis)) // Not semantic block
 
   import courses.rockthejvm.utils.general.*
   import cats.syntax.applicative.*
 
-  def inputPassword[F[_]](using mc: MonadCancel[F, Throwable]): F[String] =
+  def inputPassword[F[_], E](using MC: MonadCancel[F, E]): F[String] =
     for {
       _ <- "Input password:".pure[F].debug
       _ <- "... typing password ...".pure[F].debug
-      _ <- unsafeSleep[F, Throwable](3.seconds)
+      _ <- unsafeSleep[F, E](3.seconds)
     } yield "qwerty123"
 
-  def verifyPassword[F[_]](password: String)(using mc: MonadCancel[F, Throwable]): F[Boolean] =
+  def verifyPassword[F[_], E](password: String)(using MC: MonadCancel[F, E]): F[Boolean] =
     for {
       _ <- "Verifying...".pure[F].debug
-      _ <- unsafeSleep[F, Throwable](3.seconds)
+      _ <- unsafeSleep[F, E](3.seconds)
     } yield password == "qwerty123"
 
-  def authFlow[F[_]](using MC: MonadCancel[F, Throwable]): F[Unit] =
+  def authFlow[F[_], E](using MC: MonadCancel[F, E]): F[Unit] =
     MC.uncancelable { poll =>
       for {
         password <- poll(inputPassword).onCancel("Authentication timeout. Try again later.".pure[F].debug.void)
