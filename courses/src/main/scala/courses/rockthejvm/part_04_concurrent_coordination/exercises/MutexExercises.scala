@@ -11,16 +11,27 @@ import scala.collection.immutable.Queue
 import cats.effect.kernel.Outcome.Succeeded
 import cats.effect.kernel.Outcome.Errored
 import cats.effect.kernel.Outcome.Canceled
+import cats.effect.Concurrent
+import cats.effect.Spawn
+import cats.implicits.*
+import cats.effect.implicits.*
+import cats.effect.syntax.all.*
+ import cats.syntax.all.*
+import cats.effect.kernel.MonadCancel
+import cats.Monad
+import cats.FlatMap
+import cats.effect.kernel.Fiber
 
 object MutexExercises extends IOApp.Simple {
-  import courses.rockthejvm.utils.*
+  // import courses.rockthejvm.utils.*
+  import courses.rockthejvm.utils.general.*
 
-  abstract class Mutex {
+  abstract class MutexIO {
     def acquire: IO[Unit]
     def release: IO[Unit]
   }
 
-  object Mutex {
+  object MutexIO {
     type Signal = Deferred[IO, Unit]
 
     final case class State(locked: Boolean, waiting: Queue[Signal])
@@ -29,10 +40,10 @@ object MutexExercises extends IOApp.Simple {
 
     def createSignal: IO[Signal] = Deferred[IO, Unit]
 
-    def create: IO[Mutex] = Ref[IO].of(unlocked).map(solution)
+    def create: IO[MutexIO] = Ref[IO].of(unlocked).map(solution)
 
-    def solution(state: Ref[IO, State]): Mutex = {
-      new Mutex {
+    def solution(state: Ref[IO, State]): MutexIO = {
+      new MutexIO {
 
         /** Change the state of the Ref:
           *   - if the mutex is currently unlocked, state becomes State(false, queue.empty)
@@ -73,8 +84,8 @@ object MutexExercises extends IOApp.Simple {
       }
     }
 
-    def answer(state: Ref[IO, State]): Mutex = {
-      new Mutex {
+    def answer(state: Ref[IO, State]): MutexIO = {
+      new MutexIO {
         def acquire: IO[Unit] = createSignal.flatMap { signal =>
           state.modify {
             case State(false, _)    => State(locked = true, Queue.empty)           -> IO.unit
@@ -93,8 +104,8 @@ object MutexExercises extends IOApp.Simple {
       }
     }
 
-    def solutionCancelable(state: Ref[IO, State]): Mutex = {
-      new Mutex {
+    def solutionCancelable(state: Ref[IO, State]): MutexIO = {
+      new MutexIO {
         def acquire: IO[Unit] = IO.uncancelable { poll =>
           createSignal.flatMap { signal =>
 
@@ -123,55 +134,92 @@ object MutexExercises extends IOApp.Simple {
     }
   }
 
-  def criticalTask: IO[Int] = IO.sleep(1.second) >> IO(Random.nextInt(100))
+  trait Mutex[F[_]] {
+    def acquire: F[Unit]
+    def release: F[Unit]
+  }
+
+  object Mutex {
+    def create[F[_]: Concurrent]: F[Mutex[F]] = {
+      type Signal = Deferred[F, Unit]
+
+      final case class State(locked: Boolean, waiting: Queue[Signal])
+
+      val unlocked = State(locked = false, waiting = Queue.empty)
+
+      def createSignal: F[Signal] = Deferred[F, Unit]
+
+      Ref[F].of(unlocked).map { state =>
+        new Mutex {
+          def acquire: F[Unit] = createSignal.flatMap { signal =>
+            state.modify {
+              case State(false, _)    => State(locked = true, Queue.empty)           -> ().pure[F]
+              case State(true, queue) => State(locked = true, queue.enqueue(signal)) -> signal.get
+            }.flatten
+          }
+
+          def release: F[Unit] =
+            state.modify {
+              case State(false, _)                       => unlocked -> ().pure[F]
+              case State(true, queue) if (queue.isEmpty) => unlocked -> ().pure[F]
+              case State(true, queue) =>
+                val (head, tail) = queue.dequeue
+                State(locked = true, tail) -> head.complete(()).void
+            }.flatten
+        }
+      }
+    }
+  }
+
+  def criticalTask[F[_]: Spawn]: F[Int] = unsafeSleep[F, Throwable](1.second) >> Random.nextInt(100).pure[F]
 
   def createNonLockingTask(id: Int): IO[Int] =
     for {
       _      <- IO(s"[Task: $id]: working...").debug
-      result <- criticalTask
+      result <- criticalTask[IO]
       _      <- IO(s"[Task: $id]: gor result: $result").debug
     } yield result
 
   def demoNonLockingTasks: IO[List[Int]] = (1 to 10).toList.parTraverse(id => createNonLockingTask(id))
 
-  def createLockingTask(id: Int, mutex: Mutex): IO[Int] =
+  def createLockingTask[F[_]: Spawn](id: Int, mutex: Mutex[F]): F[Int] =
     for {
-      _ <- IO(s"[Task $id]: waiting for permission...").debug
+      _ <- s"[Task $id]: waiting for permission...".pure[F].debug
       _ <- mutex.acquire // Blocks if the mutex has been acquired by some other fiber
       // Critical section start
-      _      <- IO(s"[Task $id]: working...").debug
-      result <- criticalTask
-      _      <- IO(s"[Task $id]: gor result: $result").debug
+      _      <- s"[Task $id]: working...".pure[F].debug
+      result <- criticalTask[F]
+      _      <- s"[Task $id]: gor result: $result".pure[F].debug
       // Critical section end
       _ <- mutex.release
-      _ <- IO(s"[Task $id]: lock remove.").debug
+      _ <- s"[Task $id]: lock remove.".pure[F].debug
     } yield result
 
   // Only one task will process at the time
   def demoLockingTasks: IO[List[Int]] =
     for {
-      mutex   <- Mutex.create
+      mutex   <- Mutex.create[IO]
       results <- (1 to 10).toList.parTraverse(id => createLockingTask(id, mutex))
     } yield results
 
-  def createCancellingTask(id: Int, mutex: Mutex): IO[Int] = {
+  def createCancellingTask[F[_]: Spawn](id: Int, mutex: Mutex[F]): F[Int] = {
     if (id % 2 == 0) createLockingTask(id, mutex)
     else
       for {
-        fiber <- createLockingTask(id, mutex).onCancel(IO(s"[Task $id]: received cancellation!").debug.void).start
-        _     <- IO.sleep(2.seconds) >> fiber.cancel
+        fiber <- createLockingTask(id, mutex).onCancel(s"[Task $id]: received cancellation!".pure[F].debug.void).start
+        _     <- unsafeSleep[F, Throwable](2.seconds) >> fiber.cancel
         out   <- fiber.join
         result <- out match {
           case Succeeded(effect) => effect
-          case Errored(_)        => IO(-1)
-          case Canceled()        => IO(-2)
+          case Errored(_)        => -1.pure[F]
+          case Canceled()        => -2.pure[F]
         }
       } yield result
   }
 
   def demoCancellingTask =
     for {
-      mutex   <- Mutex.create
+      mutex   <- Mutex.create[IO]
       results <- (1 to 10).toList.parTraverse(id => createCancellingTask(id, mutex))
     } yield results
 

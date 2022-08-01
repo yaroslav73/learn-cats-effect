@@ -5,7 +5,17 @@ import cats.effect.IO
 import cats.effect.kernel.Spawn
 import cats.effect.kernel.Ref
 import cats.effect.kernel.Deferred
+import cats.effect.kernel.Outcome
+import cats.effect.Fiber
 import cats.effect.Concurrent
+import cats.syntax.*
+import cats.implicits.*
+import cats.effect.syntax.all.*
+import cats.syntax.all.*
+
+import courses.rockthejvm.utils.general.*
+import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.DurationInt
 
 object PolymorphicCoordination extends IOApp.Simple {
 
@@ -22,28 +32,25 @@ object PolymorphicCoordination extends IOApp.Simple {
 
   // Capabilities: pure, map/flatMap, raiseError, uncancelable, start (fibers), + ref/deferred
 
-  import courses.rockthejvm.utils.*
-  import scala.concurrent.duration.FiniteDuration
-  import scala.concurrent.duration.DurationInt
-  def eggBoiler: IO[Unit] = {
-    def eggReadyNotification(signal: Deferred[IO, Unit]): IO[Unit] =
+  def eggBoiler[F[_]: Concurrent]: F[Unit] = {
+    def eggReadyNotification[F[_]: Concurrent](signal: Deferred[F, Unit]): F[Unit] =
       for {
-        _ <- IO("Egg boiling on some other fiber, waiting...").debug
+        _ <- "Egg boiling on some other fiber, waiting...".pure[F].debug
         _ <- signal.get
-        _ <- IO("EGG READY!").debug
+        _ <- "EGG READY!".pure[F].debug
       } yield ()
 
-    def tickingClock(counter: Ref[IO, Int], signal: Deferred[IO, Unit]): IO[Unit] =
+    def tickingClock[F[_]: Concurrent](counter: Ref[F, Int], signal: Deferred[F, Unit]): F[Unit] =
       for {
-        _     <- IO.sleep(1.second)
+        _     <- unsafeSleep[F, Throwable](1.second)
         count <- counter.updateAndGet(_ + 1)
-        _     <- IO(count).debug
-        _     <- if (count >= 10) signal.complete(()) else tickingClock(counter, signal)
+        _     <- count.pure[F].debug
+        _     <- if (count >= 10) signal.complete(()).void else tickingClock(counter, signal)
       } yield ()
 
     for {
-      counter           <- Ref[IO].of(0)
-      signal            <- Deferred[IO, Unit]
+      counter           <- Ref[F].of(0)
+      signal            <- Deferred[F, Unit]
       notificationFiber <- eggReadyNotification(signal).start
       clock             <- tickingClock(counter, signal).start
       _                 <- notificationFiber.join
@@ -51,5 +58,37 @@ object PolymorphicCoordination extends IOApp.Simple {
     } yield ()
   }
 
-  override def run: IO[Unit] = ???
+  // Exercise: generalize raicePair
+  type RaceResult[F[_], A, B] = Either[
+    (Outcome[F, Throwable, A], Fiber[F, Throwable, B]),
+    (Fiber[F, Throwable, A], Outcome[F, Throwable, B])
+  ]
+
+  type EitherOutcome[F[_], A, B] = Either[Outcome[F, Throwable, A], Outcome[F, Throwable, B]]
+
+  def racePair[F[_], A, B](fa: F[A], fb: F[B])(using F: Concurrent[F]): F[RaceResult[F, A, B]] = {
+    F.uncancelable { poll =>
+      for {
+        deferred <- Deferred[F, EitherOutcome[F, A, B]]
+        _        <- deferred.get
+        fiberA   <- fa.guaranteeCase(outcomeA => deferred.complete(Left(outcomeA)).void).start
+        fiberB   <- fb.guaranteeCase(outcomeB => deferred.complete(Right(outcomeB)).void).start
+        result <- poll(deferred.get).onCancel { // Blocking call - should be cancelable.
+          for {
+            cancalingFiberA <- fiberA.cancel.start
+            cancalingFiberB <- fiberB.cancel.start
+            _               <- cancalingFiberA.join
+            _               <- cancalingFiberB.join
+          } yield ()
+        }
+      } yield {
+        result match {
+          case Left(outcomeA)  => Left(outcomeA, fiberB)
+          case Right(outcomeB) => Right(fiberA, outcomeB)
+        }
+      }
+    }
+  }
+
+  override def run: IO[Unit] = racePair(IO(""), IO(13)).debug.void
 }
