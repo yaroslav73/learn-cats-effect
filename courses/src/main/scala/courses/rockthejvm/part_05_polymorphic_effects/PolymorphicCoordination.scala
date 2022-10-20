@@ -1,5 +1,7 @@
 package courses.rockthejvm.part_05_polymorphic_effects
 
+import cats.Parallel
+import cats.data.EitherT
 import cats.effect.IOApp
 import cats.effect.IO
 import cats.effect.kernel.Spawn
@@ -12,10 +14,12 @@ import cats.syntax.*
 import cats.implicits.*
 import cats.effect.syntax.all.*
 import cats.syntax.all.*
-
 import courses.rockthejvm.utils.general.*
+
+import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.duration.DurationInt
+import scala.util.{Failure, Success}
 
 object PolymorphicCoordination extends IOApp.Simple {
 
@@ -90,5 +94,33 @@ object PolymorphicCoordination extends IOApp.Simple {
     }
   }
 
-  override def run: IO[Unit] = racePair(IO(""), IO(13)).debug.void
+  def eitherT[F[_]: Concurrent](s: String): EitherT[F, Int, String] = EitherT.pure(s)
+
+  import concurrent.ExecutionContext.Implicits.global
+
+  def future(futureEither: Future[Either[Int, String]]): Unit =
+    futureEither
+      .map {
+        case Left(value)  => println(s"${Thread.currentThread.getName}: $value")
+        case Right(value) => println(s"${Thread.currentThread.getName}: $value")
+      }
+      .failed
+      .foreach(_ => println(s"${Thread.currentThread.getName}: ERROR!"))
+
+  def program[F[_]: Concurrent: Parallel]: F[Unit] = {
+    import cats.implicits._
+
+    val commands = for {
+      s <- (1 to 100).toList.map(_.toString)
+    } yield for {
+      command <- eitherT(s)
+      res     = future(Future(Right(command)))
+    } yield res // future(Future(Right(command)))
+
+    // When use foldMap instead of parFoldMap we lost some numbers, why?
+    commands.parFoldMapA(_.value.start.void)
+  }
+
+  override def run: IO[Unit] = // racePair(IO(""), IO(13)).debug.void
+    program[IO]
 }

@@ -1,5 +1,6 @@
 package courses.rockthejvm.part_03_concurrency
 
+import cats.data.EitherT
 import cats.effect.{IO, IOApp}
 
 import java.util.concurrent.{ExecutorService, Executors}
