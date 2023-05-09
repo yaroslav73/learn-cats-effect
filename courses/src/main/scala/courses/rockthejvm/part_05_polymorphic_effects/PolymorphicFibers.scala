@@ -85,8 +85,8 @@ object PolymorphicFibers extends IOApp.Simple {
   import scala.concurrent.duration.DurationInt
   import courses.rockthejvm.utils.*
 
-  val fast = IO.sleep(1.second) >> IO(73).debug
-  val slow = IO.sleep(2.second) >> IO("Slow").debug
+  val fast = IO.sleep(1.second) >> IO(73).trace
+  val slow = IO.sleep(2.second) >> IO("Slow").trace
 
   override def run: IO[Unit] = simpleRace(fast, slow).void
 }

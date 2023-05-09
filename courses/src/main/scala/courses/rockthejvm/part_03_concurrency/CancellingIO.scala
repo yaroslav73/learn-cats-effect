@@ -13,17 +13,17 @@ object CancellingIO extends IOApp.Simple {
   // - IO.race & other APIs
   // - manual cancelation
 
-  val chainedIOs = IO("waiting...").debug >> IO.canceled >> IO(13).debug
+  val chainedIOs = IO("waiting...").trace >> IO.canceled >> IO(13).trace
 
   // Uncancelable
   // Example: online store, payment processor
   // Payment processor must NOT be cancelled
 
   val paymentProcessor: IO[String] = (
-    IO("Payment running, don't cancel me...").debug >>
+    IO("Payment running, don't cancel me...").trace >>
       IO.sleep(1.second) >>
-      IO("Payment completed.").debug
-  ).onCancel(IO("MEGA CANCEL!").debug.void)
+      IO("Payment completed.").trace
+  ).onCancel(IO("MEGA CANCEL!").trace.void)
 
   val atomicPaymentProcessor: IO[String]        = IO.uncancelable(_ => paymentProcessor)
   val anotherAtomicPaymentProcessor: IO[String] = paymentProcessor.uncancelable
@@ -38,7 +38,7 @@ object CancellingIO extends IOApp.Simple {
   val paymentProcessorUncancelable =
     for {
       fiber <- atomicPaymentProcessor.start
-      _     <- IO.sleep(500.millis) >> IO("Attempting cancellation...").debug >> fiber.cancel
+      _     <- IO.sleep(500.millis) >> IO("Attempting cancellation...").trace >> fiber.cancel
       _     <- fiber.join
     } yield ()
 
@@ -51,16 +51,16 @@ object CancellingIO extends IOApp.Simple {
   // - verify password, CANNOT cancelled once it's started
 
   val inputPassword: IO[String] =
-    IO("Input password:").debug >> IO("... typing password ...").debug >> IO.sleep(3.seconds) >> IO("qwerty123")
+    IO("Input password:").trace >> IO("... typing password ...").trace >> IO.sleep(3.seconds) >> IO("qwerty123")
   val verifyPassword: String => IO[Boolean] = (password: String) =>
-    IO("Verifying...").debug >> IO.sleep(3.seconds) >> IO(password == "qwerty123")
+    IO("Verifying...").trace >> IO.sleep(3.seconds) >> IO(password == "qwerty123")
 
   val authFlow: IO[Unit] = IO.uncancelable { poll =>
     for {
       // This is cancelable again, because using poll(...)
-      password <- poll(inputPassword).onCancel(IO("Authentication timeout. Try again later.").debug.void)
+      password <- poll(inputPassword).onCancel(IO("Authentication timeout. Try again later.").trace.void)
       verified <- verifyPassword(password)
-      _        <- if (verified) IO("Authentication successful.").debug else IO("Authentication failed.").debug
+      _        <- if (verified) IO("Authentication successful.").trace else IO("Authentication failed.").trace
     } yield ()
   }
 
@@ -70,7 +70,7 @@ object CancellingIO extends IOApp.Simple {
   val authProgram: IO[Unit] =
     for {
       authFiber <- authFlow.start
-      _         <- IO.sleep(2.seconds) >> IO("Authentication timeout, attempting cancel...").debug >> authFiber.cancel
+      _         <- IO.sleep(2.seconds) >> IO("Authentication timeout, attempting cancel...").trace >> authFiber.cancel
       _         <- authFiber.join
     } yield ()
 

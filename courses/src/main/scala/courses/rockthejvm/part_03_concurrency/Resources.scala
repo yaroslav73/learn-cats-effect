@@ -11,8 +11,8 @@ object Resources extends IOApp.Simple {
 
   // Use-case: manage a connection lifecycle
   class Connection(url: String) {
-    def open: IO[String]  = IO(s"Open connection to: $url ...").debug
-    def close: IO[String] = IO(s"Close connection to: $url ...").debug
+    def open: IO[String]  = IO(s"Open connection to: $url ...").trace
+    def close: IO[String] = IO(s"Close connection to: $url ...").trace
   }
 
   val url = "hello.example.com"
@@ -50,7 +50,7 @@ object Resources extends IOApp.Simple {
         IO(Connection(scanner.nextLine)).bracket { connection =>
           connection.open >> IO.never
         }(connection => connection.close.void)
-      }(scanner => IO("closing file...").debug >> IO(scanner.close()))
+      }(scanner => IO("closing file...").trace >> IO(scanner.close()))
   // Nesting resource are tedious
 
   // Define how to create (Acquire) and close (Release) resource, but not use
@@ -64,8 +64,8 @@ object Resources extends IOApp.Simple {
 
   // Resource are equivalent to bracket
   val simpleResource                        = IO("some resources...")
-  val usingResource: String => IO[String]   = s => IO(s"using a string: $s").debug
-  val releasingResource: String => IO[Unit] = s => IO(s"finalizing a string: $s").debug.void
+  val usingResource: String => IO[String]   = s => IO(s"using a string: $s").trace
+  val releasingResource: String => IO[Unit] = s => IO(s"finalizing a string: $s").trace.void
 
   val usingResourceWithBracket  = simpleResource.bracket(usingResource)(releasingResource)
   val usingResourceWithResource = Resource.make(simpleResource)(releasingResource).use(usingResource)
@@ -73,16 +73,16 @@ object Resources extends IOApp.Simple {
   // Nested resources
   def connectionFromConfigResource(path: String): Resource[IO, Connection] =
     Resource
-      .make(IO(s"Open file: $path...").debug >> openFileScanner(path))(scanner =>
-        IO("closing file...").debug >> IO(scanner.close())
+      .make(IO(s"Open file: $path...").trace >> openFileScanner(path))(scanner =>
+        IO("closing file...").trace >> IO(scanner.close())
       )
       .flatMap { scanner =>
         Resource.make(IO(Connection(scanner.nextLine())))(connection => connection.close.void)
       }
   def connectionFromConfigResourceClean(path: String): Resource[IO, Connection] =
     for {
-      scanner <- Resource.make(IO(s"Open file: $path...").debug >> openFileScanner(path))(scanner =>
-        IO("closing file...").debug >> IO(scanner.close())
+      scanner <- Resource.make(IO(s"Open file: $path...").trace >> openFileScanner(path))(scanner =>
+        IO("closing file...").trace >> IO(scanner.close())
       )
       connection <- Resource.make(IO(Connection(scanner.nextLine())))(connection => connection.close.void)
     } yield connection
@@ -93,16 +93,16 @@ object Resources extends IOApp.Simple {
   val nestedResourceFetchUrl =
     for {
       fiber <- openConnection.start
-      _     <- IO.sleep(2.seconds) >> IO("Cancelling...").debug >> fiber.cancel
+      _     <- IO.sleep(2.seconds) >> IO("Cancelling...").trace >> fiber.cancel
     } yield ()
 
   // Finalizers for regular IOs
-  val ioWithFinalizer = IO("Some resource...").debug.guarantee(IO("freeing resource...").debug.void)
+  val ioWithFinalizer = IO("Some resource...").trace.guarantee(IO("freeing resource...").trace.void)
 
-  val ioWithFinalizerCase = IO("Some resource...").debug.guaranteeCase {
-    case Succeeded(fa) => fa.flatMap(res => IO(s"Releasing resources: $res...").debug).void
-    case Errored(e)    => IO(s"Nothing to release. We failed with: ${e.getMessage}").debug.void
-    case Canceled()    => IO("Resource cancelled, nothing to release").debug.void
+  val ioWithFinalizerCase = IO("Some resource...").trace.guaranteeCase {
+    case Succeeded(fa) => fa.flatMap(res => IO(s"Releasing resources: $res...").trace).void
+    case Errored(e)    => IO(s"Nothing to release. We failed with: ${e.getMessage}").trace.void
+    case Canceled()    => IO("Resource cancelled, nothing to release").trace.void
   }
 
   override def run: IO[Unit] =

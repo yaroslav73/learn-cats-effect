@@ -175,24 +175,24 @@ object MutexExercises extends IOApp.Simple {
 
   def createNonLockingTask(id: Int): IO[Int] =
     for {
-      _      <- IO(s"[Task: $id]: working...").debug
+      _      <- IO(s"[Task: $id]: working...").trace
       result <- criticalTask[IO]
-      _      <- IO(s"[Task: $id]: gor result: $result").debug
+      _      <- IO(s"[Task: $id]: gor result: $result").trace
     } yield result
 
   def demoNonLockingTasks: IO[List[Int]] = (1 to 10).toList.parTraverse(id => createNonLockingTask(id))
 
   def createLockingTask[F[_]: Spawn](id: Int, mutex: Mutex[F]): F[Int] =
     for {
-      _ <- s"[Task $id]: waiting for permission...".pure[F].debug
+      _ <- s"[Task $id]: waiting for permission...".pure[F].trace
       _ <- mutex.acquire // Blocks if the mutex has been acquired by some other fiber
       // Critical section start
-      _      <- s"[Task $id]: working...".pure[F].debug
+      _      <- s"[Task $id]: working...".pure[F].trace
       result <- criticalTask[F]
-      _      <- s"[Task $id]: gor result: $result".pure[F].debug
+      _      <- s"[Task $id]: gor result: $result".pure[F].trace
       // Critical section end
       _ <- mutex.release
-      _ <- s"[Task $id]: lock remove.".pure[F].debug
+      _ <- s"[Task $id]: lock remove.".pure[F].trace
     } yield result
 
   // Only one task will process at the time
@@ -206,7 +206,7 @@ object MutexExercises extends IOApp.Simple {
     if (id % 2 == 0) createLockingTask(id, mutex)
     else
       for {
-        fiber <- createLockingTask(id, mutex).onCancel(s"[Task $id]: received cancellation!".pure[F].debug.void).start
+        fiber <- createLockingTask(id, mutex).onCancel(s"[Task $id]: received cancellation!".pure[F].trace.void).start
         _     <- unsafeSleep[F, Throwable](2.seconds) >> fiber.cancel
         out   <- fiber.join
         result <- out match {
@@ -224,7 +224,7 @@ object MutexExercises extends IOApp.Simple {
     } yield results
 
   def run: IO[Unit] =
-    // demoNonLockingTasks.debug.void
-    demoLockingTasks.debug.void
-    // demoCancellingTask.debug.void
+    // demoNonLockingTasks.trace.void
+    demoLockingTasks.trace.void
+    // demoCancellingTask.trace.void
 }

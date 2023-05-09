@@ -11,8 +11,8 @@ object BlockingIO extends IOApp.Simple {
   import courses.rockthejvm.utils._
 
   val someSleeps = for {
-    _ <- IO.sleep(1.second).debug
-    _ <- IO.sleep(1.second).debug
+    _ <- IO.sleep(1.second).trace
+    _ <- IO.sleep(1.second).trace
   } yield ()
 
   // Really blocking IO
@@ -27,16 +27,16 @@ object BlockingIO extends IOApp.Simple {
   // IO.ced - a signal to yield control over the thread - equivalent to IO.shift
   // The reast of the effect may run on another thread (not necessarily)
   val iosOnManyThreads = for {
-    _ <- IO("First").debug
+    _ <- IO("First").trace
     _ <- IO.cede
-    _ <- IO("Second").debug
+    _ <- IO("Second").trace
     _ <- IO.cede
-    _ <- IO("Third").debug
+    _ <- IO("Third").trace
   } yield ()
 
   def testThousandEffectsSwitch = {
     val ec: ExecutionContext = ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(8))
-    (1 to 1000).map(IO.pure).reduce(_.debug >> IO.cede >> _.debug).evalOn(ec)
+    (1 to 1000).map(IO.pure).reduce(_.trace >> IO.cede >> _.trace).evalOn(ec)
   }
 
   // Blocking calls and IO.sleep and yield control over the calling thread automatically.

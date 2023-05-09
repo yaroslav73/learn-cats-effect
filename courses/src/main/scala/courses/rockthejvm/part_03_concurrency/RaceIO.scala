@@ -10,11 +10,11 @@ object RaceIO extends IOApp.Simple {
 
   def runWithSleep[A](value: A, duration: FiniteDuration): IO[A] =
     (
-      IO(s"Starting computation: $value ...").debug >>
+      IO(s"Starting computation: $value ...").trace >>
         IO.sleep(duration) >>
-        IO(s"Computation for $value done").debug >>
+        IO(s"Computation for $value done").trace >>
         IO(value)
-    ).onCancel(IO(s"Computation CANCELLED for $value").debug.void)
+    ).onCancel(IO(s"Computation CANCELLED for $value").trace.void)
 
   def testRace(): IO[String] = {
     val thirteen = runWithSleep(13, 1.second)
@@ -42,10 +42,10 @@ object RaceIO extends IOApp.Simple {
     ]] = IO.racePair(thirteen, scala)
 
     raceResult.flatMap {
-      case Left((outcomeInt, fiberString))  => fiberString.cancel >> IO(s"Number won").debug >> IO(outcomeInt)
-      case Right((fiberInt, outcomeString)) => fiberInt.cancel >> IO(s"String won").debug >> IO(outcomeString)
+      case Left((outcomeInt, fiberString))  => fiberString.cancel >> IO(s"Number won").trace >> IO(outcomeInt)
+      case Right((fiberInt, outcomeString)) => fiberInt.cancel >> IO(s"String won").trace >> IO(outcomeString)
     }
   }
 
-  override def run: IO[Unit] = testRacePair().debug.void
+  override def run: IO[Unit] = testRacePair().trace.void
 }

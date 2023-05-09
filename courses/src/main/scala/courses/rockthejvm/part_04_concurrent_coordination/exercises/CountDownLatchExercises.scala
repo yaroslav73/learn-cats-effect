@@ -67,25 +67,25 @@ object CountDownLatchExercises extends IOApp.Simple {
 
   def announcer(latch: CountDownLatch): IO[Unit] =
     for {
-      _ <- IO("The race will starts soon...").debug >> IO.sleep(2.seconds)
-      _ <- IO("5...").debug >> IO.sleep(1.second)
+      _ <- IO("The race will starts soon...").trace >> IO.sleep(2.seconds)
+      _ <- IO("5...").trace >> IO.sleep(1.second)
       _ <- latch.release
-      _ <- IO("4...").debug >> IO.sleep(1.second)
+      _ <- IO("4...").trace >> IO.sleep(1.second)
       _ <- latch.release
-      _ <- IO("3...").debug >> IO.sleep(1.second)
+      _ <- IO("3...").trace >> IO.sleep(1.second)
       _ <- latch.release
-      _ <- IO("2...").debug >> IO.sleep(1.second)
+      _ <- IO("2...").trace >> IO.sleep(1.second)
       _ <- latch.release
-      _ <- IO("1...").debug >> IO.sleep(1.second)
+      _ <- IO("1...").trace >> IO.sleep(1.second)
       _ <- latch.release
-      _ <- IO("GO GO GO!").debug
+      _ <- IO("GO GO GO!").trace
     } yield ()
 
   def createRunner(id: Int, latch: CountDownLatch): IO[Unit] =
     for {
-      _ <- IO(s"[Runner $id] waiting for a signal...").debug
+      _ <- IO(s"[Runner $id] waiting for a signal...").trace
       _ <- latch.await // Block this fiber until the count reaches 0
-      _ <- IO(s"[Runner $id] RUNNING!").debug
+      _ <- IO(s"[Runner $id] RUNNING!").trace
     } yield ()
 
   def sprint: IO[Unit] =

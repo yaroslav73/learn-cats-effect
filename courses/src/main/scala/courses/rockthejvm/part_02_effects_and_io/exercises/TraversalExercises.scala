@@ -5,8 +5,6 @@ import cats.effect.{IO, IOApp}
 import courses.rockthejvm.part_02_effects_and_io.IOTraversal
 
 object TraversalExercises extends IOApp.Simple {
-  import courses.rockthejvm.utils._
-
   import cats.syntax.traverse._
   import cats.syntax.parallel._
 
@@ -23,14 +21,16 @@ object TraversalExercises extends IOApp.Simple {
     xs.parTraverse(identity)
 
   override def run: IO[Unit] = {
+    import courses.rockthejvm.utils._
+
     val workLoad                      = IOTraversal.workLoad
     def computeIO(s: String): IO[Int] = IOTraversal.heavyComputationIO(s)
 
     val ios = workLoad.map(computeIO)
 
-    sequence(ios).debug.void
-    sequenceF(ios).debug.void
-    parSequence(ios).debug.void
-    parSequenceF(ios).debug.void
+    sequence(ios).trace.void
+    sequenceF(ios).trace.void
+    parSequence(ios).trace.void
+    parSequenceF(ios).trace.void
   }
 }

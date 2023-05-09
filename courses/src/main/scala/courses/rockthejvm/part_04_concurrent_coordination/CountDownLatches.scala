@@ -22,25 +22,25 @@ object CountDownLatches extends IOApp.Simple {
 
   def announcer(latch: CountDownLatch[IO]): IO[Unit] =
     for {
-      _ <- IO("The race will starts soon...").debug >> IO.sleep(2.seconds)
-      _ <- IO("5...").debug >> IO.sleep(1.second)
+      _ <- IO("The race will starts soon...").trace >> IO.sleep(2.seconds)
+      _ <- IO("5...").trace >> IO.sleep(1.second)
       _ <- latch.release
-      _ <- IO("4...").debug >> IO.sleep(1.second)
+      _ <- IO("4...").trace >> IO.sleep(1.second)
       _ <- latch.release
-      _ <- IO("3...").debug >> IO.sleep(1.second)
+      _ <- IO("3...").trace >> IO.sleep(1.second)
       _ <- latch.release
-      _ <- IO("2...").debug >> IO.sleep(1.second)
+      _ <- IO("2...").trace >> IO.sleep(1.second)
       _ <- latch.release
-      _ <- IO("1...").debug >> IO.sleep(1.second)
+      _ <- IO("1...").trace >> IO.sleep(1.second)
       _ <- latch.release
-      _ <- IO("GO GO GO!").debug
+      _ <- IO("GO GO GO!").trace
     } yield ()
 
   def createRunner(id: Int, latch: CountDownLatch[IO]): IO[Unit] =
     for {
-      _ <- IO(s"[Runner $id] waiting for a signal...").debug
+      _ <- IO(s"[Runner $id] waiting for a signal...").trace
       _ <- latch.await // Block this fiber until the count reaches 0
-      _ <- IO(s"[Runner $id] RUNNING!").debug
+      _ <- IO(s"[Runner $id] RUNNING!").trace
     } yield ()
 
   def sprint: IO[Unit] =
@@ -90,11 +90,11 @@ object CountDownLatches extends IOApp.Simple {
     destination: String
   ): IO[Unit] =
     for {
-      _     <- IO(s"[Task $id] downloading chunk...").debug
+      _     <- IO(s"[Task $id] downloading chunk...").trace
       _     <- IO.sleep((Random.nextDouble * 1000).toInt.millis)
       chunk <- FileServer.fileChunks(id)
       _     <- writeToFile(s"$destination/$filename.part_$id", chunk)
-      _     <- IO(s"[Task $id] chunk download complete.").debug
+      _     <- IO(s"[Task $id] chunk download complete.").trace
       _     <- latch.release
     } yield ()
 
@@ -107,7 +107,7 @@ object CountDownLatches extends IOApp.Simple {
     for {
       n     <- FileServer.numberOfChunks
       latch <- CountDownLatch[IO](n)
-      _     <- IO(s"Download started on $n fibers.").debug
+      _     <- IO(s"Download started on $n fibers.").trace
       _     <- (0 until n).toList.parTraverse(id => craeteFileDownloaderTask(id, latch, filename, destination))
       _     <- latch.await
       _ <- (0 until n).toList.traverse { id =>

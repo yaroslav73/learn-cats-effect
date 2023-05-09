@@ -3,9 +3,11 @@ package courses.rockthejvm.utils
 import cats.effect.IO
 
 extension [A](ioa: IO[A])
-  def debug: IO[A] =
+  def trace: IO[A] =
     for {
       a <- ioa
       t = Thread.currentThread.getName
-      _ = println(s"[$t]: $a")
+      g = Console.GREEN
+      r = Console.RESET
+      _ = println(s"[$g$t$r]: $a")
     } yield a

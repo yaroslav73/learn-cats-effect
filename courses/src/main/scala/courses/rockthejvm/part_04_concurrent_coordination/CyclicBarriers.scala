@@ -27,18 +27,18 @@ object CyclicBarriers extends IOApp.Simple {
   def createUser(id: Int, barrier: CyclicBarrier[IO]): IO[Unit] =
     for {
       _ <- IO.sleep((Random.nextDouble * 500).toInt.millis)
-      _ <- IO(s"[User $id] Just heard there's a new socual network - signing up for the waitlist...").debug
+      _ <- IO(s"[User $id] Just heard there's a new socual network - signing up for the waitlist...").trace
       _ <- IO.sleep((Random.nextDouble * 1500).toInt.millis)
-      _ <- IO(s"[User $id] On the waitlist now, can't wait!!!").debug
+      _ <- IO(s"[User $id] On the waitlist now, can't wait!!!").trace
       _ <- barrier.await // Block the fiber when there are exactly N users waiting
-      _ <- IO(s"[User $id] OMG! This is so cool!!!").debug
+      _ <- IO(s"[User $id] OMG! This is so cool!!!").trace
     } yield ()
 
   def openNetwork: IO[Unit] =
     for {
       _ <- IO(
         "[Announcer] The Rock the JVM social network is up for registration! Launching when we have 10 users!"
-      ).debug
+      ).trace
       barrier <- CyclicBarrier[IO](10)
       _       <- (1 to 7).toList.parTraverse(id => createUser(id, barrier))
     } yield ()

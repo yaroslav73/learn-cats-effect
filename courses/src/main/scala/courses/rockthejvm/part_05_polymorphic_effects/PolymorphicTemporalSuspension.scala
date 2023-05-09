@@ -23,9 +23,9 @@ object PolymorphicTemporalSuspension extends IOApp.Simple {
 
   // Abilities: pure, map/flatMap, raiseError, uncancelable, start, ref/deferred + sleep
   val temporalIO        = Temporal[IO] // Given Temporal[IO] in scope
-  val chainOfEffectsOne = IO("Loading...").debug *> IO.sleep(1.second) *> IO("Game ready!").debug
+  val chainOfEffectsOne = IO("Loading...").trace *> IO.sleep(1.second) *> IO("Game ready!").trace
   val chainOfEffectsTwo =
-    temporalIO.pure("Loading...").debug *> temporalIO.sleep(1.second) *> temporalIO.pure("Game ready!").debug
+    temporalIO.pure("Loading...").trace *> temporalIO.sleep(1.second) *> temporalIO.pure("Game ready!").trace
 
   // Exercise: generalize code
   def timeoutIO[A](ioa: IO[A], duration: FiniteDuration): IO[A] =

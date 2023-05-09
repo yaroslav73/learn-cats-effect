@@ -12,8 +12,8 @@ object Fibers extends IOApp.Simple {
 
   def sameThreadIOs: IO[Unit] =
     for {
-      _ <- thirteen.debug
-      _ <- scala.debug
+      _ <- thirteen.trace
+      _ <- scala.trace
     } yield ()
 
   // Fibers introduction
@@ -22,22 +22,22 @@ object Fibers extends IOApp.Simple {
 
   // - the fiber is not actually started,
   //   but the fiber allocation is wrapped in another thread
-  val fiber: IO[Fiber[IO, Throwable, Int]] = thirteen.debug.start
+  val fiber: IO[Fiber[IO, Throwable, Int]] = thirteen.trace.start
 
   def differentThreadIOs: IO[Unit] =
     for {
-      ft <- thirteen.debug.start
-      fs <- scala.debug.start
-      _  <- ft.join.debug
-      _  <- fs.join.debug
+      ft <- thirteen.trace.start
+      fs <- scala.trace.start
+      _  <- ft.join.trace
+      _  <- fs.join.trace
     } yield ()
 
   // Joining fiber
   // join - is an effect which waits for the fiber to terminate
   def runInAnotherThread[A, B](ioa: IO[A], iob: IO[B]): IO[(Outcome[IO, Throwable, A], Outcome[IO, Throwable, B])] =
     for {
-      fa <- ioa.debug.start.debug
-      fb <- iob.debug.start.debug
+      fa <- ioa.trace.start.trace
+      fb <- iob.trace.start.trace
       a  <- fa.join
       b  <- fb.join
     } yield (a, b)
@@ -53,7 +53,7 @@ object Fibers extends IOApp.Simple {
 
   def runInAnotherThread[A](ioa: IO[A]): IO[Outcome[IO, Throwable, A]] =
     for {
-      fa <- ioa.debug.start.debug
+      fa <- ioa.trace.start.trace
       a  <- fa.join
     } yield a
 
@@ -71,12 +71,12 @@ object Fibers extends IOApp.Simple {
     } yield result
 
   def testCancel: IO[Outcome[IO, Throwable, String]] = {
-    val task                        = IO("starting...").debug >> IO.sleep(1.second) >> IO("done!").debug
-    val taskWithCancellationHandler = task.onCancel(IO("cancelled!").debug.void)
+    val task                        = IO("starting...").trace >> IO.sleep(1.second) >> IO("done!").trace
+    val taskWithCancellationHandler = task.onCancel(IO("cancelled!").trace.void)
 
     for {
       fib    <- taskWithCancellationHandler.start                 // Run on a separate thread
-      _      <- IO.sleep(500.millis) >> IO("cancelling...").debug // Running on the calling thread
+      _      <- IO.sleep(500.millis) >> IO("cancelling...").trace // Running on the calling thread
       _      <- fib.cancel
       result <- fib.join
     } yield result
@@ -87,9 +87,9 @@ object Fibers extends IOApp.Simple {
       IO(println("------------------------------------------")) *>
       differentThreadIOs *>
       IO(println("------------------------------------------")) *>
-      runInAnotherThread(thirteen, scala).debug.void *>
+      runInAnotherThread(thirteen, scala).trace.void *>
       IO(println("------------------------------------------")) *>
-      throwOnAnotherThread.debug.void *>
+      throwOnAnotherThread.trace.void *>
       IO(println("------------------------------------------")) *>
-      testCancel.debug.void
+      testCancel.trace.void
 }

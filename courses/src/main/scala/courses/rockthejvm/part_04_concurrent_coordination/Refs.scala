@@ -50,9 +50,9 @@ object Refs extends IOApp.Simple {
     def task(workload: String): IO[Unit] = {
       val wordCount = workload.split(" ").length
       for {
-        _        <- IO(s"Counting words for '$workload': $wordCount").debug
+        _        <- IO(s"Counting words for '$workload': $wordCount").trace
         newCount <- IO(count + wordCount)
-        _        <- IO(s"New total: $newCount").debug
+        _        <- IO(s"New total: $newCount").trace
         _        <- IO(count += wordCount)
       } yield ()
     }
@@ -75,11 +75,11 @@ object Refs extends IOApp.Simple {
     def task(workload: String, ref: Ref[IO, Int]): IO[Unit] = {
       val wordCount = workload.split(" ").length
       for {
-        _        <- IO(s"Counting words for '$workload': $wordCount").debug
+        _        <- IO(s"Counting words for '$workload': $wordCount").trace
         current  <- ref.get
-        _        <- IO(s"Current value: $current").debug // 0, because execute on different threads.
+        _        <- IO(s"Current value: $current").trace // 0, because execute on different threads.
         newCount <- ref.updateAndGet(_ + wordCount)
-        _        <- IO(s"New total: $newCount").debug
+        _        <- IO(s"New total: $newCount").trace
       } yield ()
     }
 
@@ -93,6 +93,6 @@ object Refs extends IOApp.Simple {
   }
 
   override def run: IO[Unit] =
-    atomicNumber.flatMap(ref => ref.get).debug.void >>
+    atomicNumber.flatMap(ref => ref.get).trace.void >>
       demoConcurrentWorkPure
 }

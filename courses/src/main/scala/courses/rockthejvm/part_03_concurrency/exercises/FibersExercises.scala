@@ -28,8 +28,8 @@ object FibersExercises extends IOApp.Simple {
   //    - if one or both cancelled, raise a RuntimeException
   def tupleIOs[A, B](ioa: IO[A], iob: IO[B]): IO[(A, B)] = {
     val tuple = for {
-      fa <- ioa.debug.start
-      fb <- iob.debug.start
+      fa <- ioa.trace.start
+      fb <- iob.trace.start
       a  <- fa.join
       b  <- fb.join
     } yield (a, b)
@@ -70,10 +70,10 @@ object FibersExercises extends IOApp.Simple {
     val failedIO     = IO.raiseError(new IllegalArgumentException("Wrong number!"))
     val cancelledIO  = IO.canceled
 
-    processResultsFromFiber(successOneIO).debug *>
+    processResultsFromFiber(successOneIO).trace *>
       linesIO *>
       tupleIOs(successOneIO, successTwoIO) *>
       linesIO *>
-      timeout(successTwoIO *> IO.sleep(2.seconds), 1.second).debug.void
+      timeout(successTwoIO *> IO.sleep(2.seconds), 1.second).trace.void
   }
 }

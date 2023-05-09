@@ -7,7 +7,7 @@ import scala.concurrent.duration.FiniteDuration
 import cats.effect.kernel.MonadCancel
 
 extension [F[_], A](fa: F[A])
-  def debug(using functor: Functor[F]): F[A] =
+  def trace(using functor: Functor[F]): F[A] =
     for {
       a <- fa
       t = Thread.currentThread.getName

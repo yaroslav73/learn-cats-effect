@@ -12,7 +12,9 @@
 # sbt
 # (may want to keep parts of 'project')
 bin/
-project/
+project/.bloop
+project/project
+project/metals.sbt
 target/
 build/
 

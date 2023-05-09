@@ -17,8 +17,8 @@ object IOParallelism extends IOApp.Simple {
   import courses.rockthejvm.utils._
   import cats.syntax.apply._
 
-  val number: IO[Int]        = IO.delay(13).debug
-  val scala: IO[String]      = IO("Scala").debug
+  val number: IO[Int]        = IO.delay(13) // .debug
+  val scala: IO[String]      = IO("Scala")  // .debug
   val goalInLife: IO[String] = (number, scala).mapN((n, s) => s"Goal in life is: $s and $n")
 
   // Parallelism in IO
@@ -55,10 +55,10 @@ object IOParallelism extends IOApp.Simple {
     // If you want to check how to works composition with failed IO comment previous failed IO.
     composedIO.map(println) *>
       goalInLife.map(println) *>
-      goalInLifeSequential.debug.void *>
-      goalInLifeParallelShort.debug.void *>
-      parallelWithFailure.debug.void *>
-      parallelWithTwoFailure.debug.void *>
-      parallelWithTwoFailureDelayed.debug.void
+      goalInLifeSequential.trace.void *>
+      goalInLifeParallelShort.trace.void *>
+      parallelWithFailure.trace.void *>
+      parallelWithTwoFailure.trace.void *>
+      parallelWithTwoFailureDelayed.trace.void
   }
 }

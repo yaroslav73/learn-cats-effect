@@ -27,16 +27,16 @@ object Defers extends IOApp.Simple {
   def demoDeferred: IO[Unit] = {
     def consumer(signal: Deferred[IO, Int]): IO[Unit] =
       for {
-        _      <- IO("[consumer]: waiting for result...").debug
+        _      <- IO("[consumer]: waiting for result...").trace
         number <- signal.get // Blocker
-        _      <- IO(s"[consumer]: got the result: $number").debug
+        _      <- IO(s"[consumer]: got the result: $number").trace
       } yield ()
 
     def producer(signal: Deferred[IO, Int]): IO[Unit] =
       for {
-        _      <- IO("[producer]: evaluating number...").debug
+        _      <- IO("[producer]: evaluating number...").trace
         _      <- IO.sleep(1.second)
-        _      <- IO("[producer]: complete: 13").debug
+        _      <- IO("[producer]: complete: 13").trace
         number <- IO(13)
         _      <- signal.complete(number)
       } yield ()
@@ -57,7 +57,7 @@ object Defers extends IOApp.Simple {
     def downloadFile(contentRef: Ref[IO, String]): IO[Unit] =
       fileParts
         .map { part =>
-          IO(s"[Downloader]: Got: '$part'").debug >> IO.sleep(1.second) >> contentRef.update(content => content + part)
+          IO(s"[Downloader]: Got: '$part'").trace >> IO.sleep(1.second) >> contentRef.update(content => content + part)
         }
         .sequence
         .void
@@ -66,9 +66,9 @@ object Defers extends IOApp.Simple {
       for {
         file <- contentRef.get
         _ <-
-          if (file.endsWith("<EOF>")) IO("[Notifier]: File download complete.").debug
+          if (file.endsWith("<EOF>")) IO("[Notifier]: File download complete.").trace
           else
-            IO("[Notifier]: Downloading...").debug >> IO.sleep(500.milli) >> notifyFileComplete(
+            IO("[Notifier]: Downloading...").trace >> IO.sleep(500.milli) >> notifyFileComplete(
               contentRef
             ) // Busy waiting!
       } yield ()
@@ -86,14 +86,14 @@ object Defers extends IOApp.Simple {
   def fileNotifierWithDeferred: IO[Unit] = {
     def notifyFileComplete(signal: Deferred[IO, String]): IO[Unit] =
       for {
-        _ <- IO("[Notifier]: Downloading...").debug
+        _ <- IO("[Notifier]: Downloading...").trace
         _ <- signal.get // Blocks until the signal is completed
-        _ <- IO("[Notifier]: File download complete.").debug
+        _ <- IO("[Notifier]: File download complete.").trace
       } yield ()
 
     def fileDownloader(part: String, contentRef: Ref[IO, String], signal: Deferred[IO, String]): IO[Unit] =
       for {
-        _       <- IO(s"[Downloader]: Got: '$part'").debug
+        _       <- IO(s"[Downloader]: Got: '$part'").trace
         _       <- IO.sleep(1.second)
         content <- contentRef.updateAndGet(content => content + part)
         _       <- if (content.contains("<EOF>")) signal.complete(content) else IO.unit

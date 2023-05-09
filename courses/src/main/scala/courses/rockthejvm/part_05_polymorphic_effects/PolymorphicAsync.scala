@@ -65,7 +65,7 @@ object PolymorphicAsync extends IOApp.Simple {
         println(s"[${Thread.currentThread().getName}]: computing an async number...")
         callback(Right(73))
       }
-    }.as(Some(IO("Cancelled!").debug.void)) // Finalizer in case the computation gets cancelled
+    }.as(Some(IO("Cancelled!").trace.void)) // Finalizer in case the computation gets cancelled
   }
 
   // Same as above
@@ -75,7 +75,7 @@ object PolymorphicAsync extends IOApp.Simple {
         println(s"[${Thread.currentThread().getName}]: computing an async number...")
         callback(Right(73))
       }
-    }.as(Some(IO("Cancelled!").debug.void)) // Finalizer in case the computation gets cancelled
+    }.as(Some(IO("Cancelled!").trace.void)) // Finalizer in case the computation gets cancelled
   }
 
   val _excecutionContext = ExecutionContext.fromExecutorService(threadPool)

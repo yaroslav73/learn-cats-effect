@@ -89,23 +89,23 @@ object PolymorphicCancellation extends IOApp.Simple {
 
   def inputPassword[F[_], E](using MC: MonadCancel[F, E]): F[String] =
     for {
-      _ <- "Input password:".pure[F].debug
-      _ <- "... typing password ...".pure[F].debug
+      _ <- "Input password:".pure[F].trace
+      _ <- "... typing password ...".pure[F].trace
       _ <- unsafeSleep[F, E](3.seconds)
     } yield "qwerty123"
 
   def verifyPassword[F[_], E](password: String)(using MC: MonadCancel[F, E]): F[Boolean] =
     for {
-      _ <- "Verifying...".pure[F].debug
+      _ <- "Verifying...".pure[F].trace
       _ <- unsafeSleep[F, E](3.seconds)
     } yield password == "qwerty123"
 
   def authFlow[F[_], E](using MC: MonadCancel[F, E]): F[Unit] =
     MC.uncancelable { poll =>
       for {
-        password <- poll(inputPassword).onCancel("Authentication timeout. Try again later.".pure[F].debug.void)
+        password <- poll(inputPassword).onCancel("Authentication timeout. Try again later.".pure[F].trace.void)
         verified <- verifyPassword(password)
-        _        <- if (verified) "Authentication successful.".pure[F].debug else "Authentication failed.".pure[F].debug
+        _        <- if (verified) "Authentication successful.".pure[F].trace else "Authentication failed.".pure[F].trace
       } yield ()
     }
 
@@ -117,7 +117,7 @@ object PolymorphicCancellation extends IOApp.Simple {
       authFiber <- authFlow.start
       _ <- unsafeSleep[F, Throwable](2.seconds) >> "Authentication timeout, attempting cancel..."
         .pure[F]
-        .debug >> authFiber.cancel
+        .trace >> authFiber.cancel
       _ <- authFiber.join
     } yield ()
 

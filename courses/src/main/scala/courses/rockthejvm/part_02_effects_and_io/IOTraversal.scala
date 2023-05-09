@@ -38,7 +38,7 @@ object IOTraversal extends IOApp.Simple {
   def heavyComputationIO(s: String): IO[Int] = IO {
     Thread.sleep(1000)
     s.split(" ").length
-  }.debug
+  }.trace
 
   val ios: List[IO[Int]]      = workLoad.map(heavyComputationIO)
   val singleIO: IO[List[Int]] = traverseList.traverse(workLoad)(heavyComputationIO)
@@ -53,8 +53,8 @@ object IOTraversal extends IOApp.Simple {
 //    traverseFuture()
 //    IO(Thread.sleep(10000))
 
-    singleIO.map(_.sum).debug.void
+    singleIO.map(_.sum).trace.void
 
-    parallelSingleIO.map(_.sum).debug.void
+    parallelSingleIO.map(_.sum).trace.void
   }
 }

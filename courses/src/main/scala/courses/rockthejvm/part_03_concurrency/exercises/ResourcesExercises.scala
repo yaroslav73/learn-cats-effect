@@ -21,24 +21,24 @@ object ResourcesExercises extends IOApp.Simple {
     IO(new Scanner(new FileReader(new File(path))))
 
   def readLineByLine(scanner: Scanner): IO[Unit] =
-    if (scanner.hasNextLine) IO(scanner.nextLine()).debug >> IO.sleep(100.millis) >> readLineByLine(scanner)
+    if (scanner.hasNextLine) IO(scanner.nextLine()).trace >> IO.sleep(100.millis) >> readLineByLine(scanner)
     else IO.unit
 
   def bracketReadFile(path: String): IO[Unit] =
-    IO(s"Opening file $path").debug *>
+    IO(s"Opening file $path").trace *>
       openFileScanner(path)
         .bracket(scanner => readLineByLine(scanner))(scanner =>
-          IO(s"Closed scanner for file $path").debug *> IO(scanner.close())
+          IO(s"Closed scanner for file $path").trace *> IO(scanner.close())
         )
 
   // Exercise:
   // same as above, but using Resource instead of Bracket.
   def resourceFromFile(path: String): Resource[IO, Scanner] =
     Resource
-      .make(openFileScanner(path))(scanner => IO(s"Closed scanner for file: $path").debug >> IO(scanner.close()))
+      .make(openFileScanner(path))(scanner => IO(s"Closed scanner for file: $path").trace >> IO(scanner.close()))
 
   def resourceReadFile(path: String): IO[Unit] =
-    IO(s"Opening file: $path...").debug >>
+    IO(s"Opening file: $path...").trace >>
       resourceFromFile(path).use(readLineByLine)
 
   def cancelReadFile(path: String): IO[Unit] =

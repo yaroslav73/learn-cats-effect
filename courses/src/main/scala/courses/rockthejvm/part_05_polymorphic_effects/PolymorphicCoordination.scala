@@ -39,16 +39,16 @@ object PolymorphicCoordination extends IOApp.Simple {
   def eggBoiler[F[_]: Concurrent]: F[Unit] = {
     def eggReadyNotification[F[_]: Concurrent](signal: Deferred[F, Unit]): F[Unit] =
       for {
-        _ <- "Egg boiling on some other fiber, waiting...".pure[F].debug
+        _ <- "Egg boiling on some other fiber, waiting...".pure[F].trace
         _ <- signal.get
-        _ <- "EGG READY!".pure[F].debug
+        _ <- "EGG READY!".pure[F].trace
       } yield ()
 
     def tickingClock[F[_]: Concurrent](counter: Ref[F, Int], signal: Deferred[F, Unit]): F[Unit] =
       for {
         _     <- unsafeSleep[F, Throwable](1.second)
         count <- counter.updateAndGet(_ + 1)
-        _     <- count.pure[F].debug
+        _     <- count.pure[F].trace
         _     <- if (count >= 10) signal.complete(()).void else tickingClock(counter, signal)
       } yield ()
 
@@ -114,13 +114,13 @@ object PolymorphicCoordination extends IOApp.Simple {
       s <- (1 to 100).toList.map(_.toString)
     } yield for {
       command <- eitherT(s)
-      res     = future(Future(Right(command)))
+      res = future(Future(Right(command)))
     } yield res // future(Future(Right(command)))
 
     // When use foldMap instead of parFoldMap we lost some numbers, why?
     commands.parFoldMapA(_.value.start.void)
   }
 
-  override def run: IO[Unit] = // racePair(IO(""), IO(13)).debug.void
+  override def run: IO[Unit] = // racePair(IO(""), IO(13)).trace.void
     program[IO]
 }

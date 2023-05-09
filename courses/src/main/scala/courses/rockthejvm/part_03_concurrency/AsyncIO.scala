@@ -1,6 +1,5 @@
 package courses.rockthejvm.part_03_concurrency
 
-import cats.data.EitherT
 import cats.effect.{IO, IOApp}
 
 import java.util.concurrent.{ExecutorService, Executors}
@@ -91,23 +90,23 @@ object AsyncIO extends IOApp.Simple {
           val result = computeNumberEither
           callback(result)
         }
-      }.as(Some(IO("Cancelled!").debug.void)) // IO[Unit] => IO[Option[IO[Unit]]
+      }.as(Some(IO("Cancelled!").trace.void)) // IO[Unit] => IO[Option[IO[Unit]]
     }
 
     for {
       fiber <- asyncNumberIO.start
-      _     <- IO.sleep(500.millis) >> IO("Cancelling...").debug >> fiber.cancel
+      _     <- IO.sleep(500.millis) >> IO("Cancelling...").trace >> fiber.cancel
       _     <- fiber.join
     } yield ()
   }
 
   override def run: IO[Unit] =
-//    asyncComputationNumberIO.debug >>
-//      asyncToIO(() => 73)(ec).debug >>
-//      futureToIOInt.debug >>
-//      futureToIO(numberFuture).debug >>
-//      IO.fromFuture(IO(numberFuture)).debug >>
-//      neverEndingIO(() => 7).debug >>
-    demoAsyncCancellation.debug >>
+//    asyncComputationNumberIO.trace >>
+//      asyncToIO(() => 73)(ec).trace >>
+//      futureToIOInt.trace >>
+//      futureToIO(numberFuture).trace >>
+//      IO.fromFuture(IO(numberFuture)).trace >>
+//      neverEndingIO(() => 7).trace >>
+    demoAsyncCancellation.trace >>
       IO(threadPool.shutdown())
 }

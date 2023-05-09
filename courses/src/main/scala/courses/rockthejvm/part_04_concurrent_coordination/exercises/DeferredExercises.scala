@@ -34,16 +34,16 @@ object DeferredExercises extends IOApp.Simple {
     def increment(counter: Ref[IO, Int], deferred: Deferred[IO, Int]): IO[Unit] =
       for {
         n <- counter.updateAndGet(_ + 1)
-        _ <- IO(s"[increment]: $n").debug
+        _ <- IO(s"[increment]: $n").trace
         _ <- IO.sleep(1.second)
         _ <- if (n >= 10) deferred.complete(n) else increment(counter, deferred)
       } yield ()
 
     def notifier(deferred: Deferred[IO, Int]): IO[Unit] =
       for {
-        _ <- IO("[notifier]: Start timer!").debug
+        _ <- IO("[notifier]: Start timer!").trace
         _ <- deferred.get
-        _ <- IO("[notifier]: Time's up!").debug
+        _ <- IO("[notifier]: Time's up!").trace
       } yield ()
 
     for {
