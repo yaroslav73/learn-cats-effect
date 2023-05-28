@@ -7,6 +7,9 @@ import cats.effect.IOApp
 import cats.effect.ExitCode
 import cats.effect.IO
 import java.io.FileInputStream
+import scala.util.control.NonFatal
+import cats.data.Validated.Valid
+import cats.data.Validated.Invalid
 
 object ErrorHandlingAppExercise extends IOApp:
   object Validations:
@@ -50,7 +53,10 @@ object ErrorHandlingAppExercise extends IOApp:
       // TODO:
       // Implement a load file function that loads all the contents of a file into a String
       // If the file does not exist, capture that with the domain error FileNotFound
-      ???
+      loadFileContent(filename).attempt.map {
+        case Right(value) => Right(value.map(_.toChar).mkString)
+        case Left(_)      => Left(FileNotFound(filename))
+      }
     }
 
   sealed trait DomainError:
@@ -66,4 +72,21 @@ object ErrorHandlingAppExercise extends IOApp:
   // If a technical, non-fatal error occurs, output "Something went wrong" to the console
   // If a fatal error occurs, just re-raise it and let everything fails
 
-  def run(args: List[String]): IO[ExitCode] = ???
+  def run(args: List[String]): IO[ExitCode] =
+    (
+      args.headOption match
+        case None => IO.println("Provide the file name as first argument of args.")
+        case Some(filename) =>
+          Validations.validateFileName(filename) match
+            case Valid(filename) =>
+              Service.loadFile(filename).map {
+                case Right(content) => Service.countWords(content)
+                case Left(error)    => error.errorMessage
+              }
+            case Invalid(errors) => IO.println(s"Filename validation failed: ${errors.toString}")
+    )
+      .handleErrorWith {
+        case NonFatal(_) => IO.println("Something went wrong")
+        case e           => IO.raiseError(e)
+      }
+      .as(ExitCode.Success)
