@@ -1,6 +1,8 @@
 package courses.udemy.functional_effect.section_04
 
 // import cats.implicits._
+import cats.implicits.catsSyntaxApplicativeId
+import cats.implicits.catsSyntaxEitherId
 import cats.implicits.catsSyntaxTuple2Semigroupal
 import cats.implicits.catsSyntaxFoldableOps0
 import cats.data.{Validated, ValidatedNec}
@@ -11,6 +13,7 @@ import java.io.FileInputStream
 import scala.util.control.NonFatal
 import cats.data.Validated.Valid
 import cats.data.Validated.Invalid
+import java.io.FileNotFoundException
 
 object ErrorHandlingAppExercise extends IOApp:
   object Validations:
@@ -58,6 +61,16 @@ object ErrorHandlingAppExercise extends IOApp:
         case Right(value) => Right(value.map(_.toChar).mkString)
         case Left(_)      => Left(FileNotFound(filename))
       }
+
+      // Instructor implementation
+      loadFileContent(filename)
+        .map { bytes =>
+          new String(bytes).asRight[DomainError]
+        }
+        .handleErrorWith {
+          case _: FileNotFoundException => FileNotFound(filename).asLeft[String].pure[IO]
+          case t: Throwable             => IO.raiseError(t)
+        }
     }
 
   sealed trait DomainError:
@@ -72,22 +85,43 @@ object ErrorHandlingAppExercise extends IOApp:
   // If a domain error orrucrs, communicate it to the user via the console
   // If a technical, non-fatal error occurs, output "Something went wrong" to the console
   // If a fatal error occurs, just re-raise it and let everything fails
+  import Service._
+  import Validations._
+
+  def program(args: List[String]): IO[ExitCode] = (
+    args.headOption match
+      case None => IO.println("Error: Please, provide the file name as first argument of args.")
+      case Some(filename) =>
+        validateFileName(filename) match
+          case Valid(filename) =>
+            loadFile(filename).map {
+              case Right(content) => println(s"Total words: ${Service.countWords(content)}")
+              case Left(error)    => error.errorMessage
+            }
+          case Invalid(errors) => IO.println(s"Filename validation failed: ${errors.mkString_("\n")}")
+  )
+    .handleErrorWith {
+      case NonFatal(_) => IO.println("Something went wrong")
+      case e           => IO.raiseError(e)
+    }
+    .as(ExitCode.Success)
+
+  def instructorSolution(filename: String): IO[ExitCode] =
+    (
+      validateFileName(filename) match
+        case Valid(filename) =>
+          loadFile(filename).flatMap {
+            case Right(content) =>
+              val wordsCount = countWords(content)
+              IO.println(s"Words count: $wordsCount").as(ExitCode.Success)
+            case Left(error) => IO.println(error.errorMessage).as(ExitCode.Error)
+          }
+        case Invalid(errors) =>
+          IO.println(s"File validations failed:\n\t${errors.mkString_("\n\t")}").as(ExitCode.Error)
+    ).handleErrorWith {
+      case NonFatal(_)  => IO.println("Something went wrong").as(ExitCode.Error)
+      case t: Throwable => IO.raiseError(t)
+    }
 
   def run(args: List[String]): IO[ExitCode] =
-    (
-      args.headOption match
-        case None => IO.println("Error: Please, provide the file name as first argument of args.")
-        case Some(filename) =>
-          Validations.validateFileName(filename) match
-            case Valid(filename) =>
-              Service.loadFile(filename).map {
-                case Right(content) => println(s"Total words: ${Service.countWords(content)}")
-                case Left(error)    => error.errorMessage
-              }
-            case Invalid(errors) => IO.println(s"Filename validation failed: ${errors.mkString_("\n")}")
-    )
-      .handleErrorWith {
-        case NonFatal(_) => IO.println("Something went wrong")
-        case e           => IO.raiseError(e)
-      }
-      .as(ExitCode.Success)
+    program(args)
