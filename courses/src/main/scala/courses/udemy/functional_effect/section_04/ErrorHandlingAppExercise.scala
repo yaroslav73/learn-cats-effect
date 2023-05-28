@@ -2,6 +2,7 @@ package courses.udemy.functional_effect.section_04
 
 // import cats.implicits._
 import cats.implicits.catsSyntaxTuple2Semigroupal
+import cats.implicits.catsSyntaxFoldableOps0
 import cats.data.{Validated, ValidatedNec}
 import cats.effect.IOApp
 import cats.effect.ExitCode
@@ -30,7 +31,7 @@ object ErrorHandlingAppExercise extends IOApp:
       )
 
     def validateFileName(filename: String): Valid[String] =
-      (validateExtension(filename), validateLength(filename, maxLength = 64)).mapN { case (_, s) => s }
+      (validateExtension(filename), validateLength(filename, maxLength = 128)).mapN { case (_, s) => s }
 
   object Service:
     def countWords(content: String): Int =
@@ -75,15 +76,15 @@ object ErrorHandlingAppExercise extends IOApp:
   def run(args: List[String]): IO[ExitCode] =
     (
       args.headOption match
-        case None => IO.println("Provide the file name as first argument of args.")
+        case None => IO.println("Error: Please, provide the file name as first argument of args.")
         case Some(filename) =>
           Validations.validateFileName(filename) match
             case Valid(filename) =>
               Service.loadFile(filename).map {
-                case Right(content) => Service.countWords(content)
+                case Right(content) => println(s"Total words: ${Service.countWords(content)}")
                 case Left(error)    => error.errorMessage
               }
-            case Invalid(errors) => IO.println(s"Filename validation failed: ${errors.toString}")
+            case Invalid(errors) => IO.println(s"Filename validation failed: ${errors.mkString_("\n")}")
     )
       .handleErrorWith {
         case NonFatal(_) => IO.println("Something went wrong")
