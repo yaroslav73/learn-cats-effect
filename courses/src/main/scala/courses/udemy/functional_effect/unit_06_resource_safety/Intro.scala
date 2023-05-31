@@ -25,6 +25,18 @@ object Intro extends IOApp:
       fw.close()
     }
 
+  def writeAllLectureExample[A](xs: List[A], file: File)(using encoder: RowEncoder[A]): IO[Unit] =
+    for {
+      fw <- IO.blocking(new FileWriter(file))
+      content = xs.map(encoder.encode(_)).mkString("\n")
+      _ <- IO.blocking(fw.write(content)) *> IO.raiseError(new Exception("writing failed..."))
+      _ <- IO.println("Content wrote...")
+      _ <- IO.blocking(fw.flush())
+      _ <- IO.println("Writer flushed...")
+      _ <- IO.blocking(fw.close())
+      _ <- IO.println("Writer closed...")
+    } yield ()
+
   def writeAllWithBracket[A](xs: List[A], file: File)(using encoder: RowEncoder[A]): IO[Unit] =
     IO(new FileWriter(file))
       .bracket { fw =>
@@ -32,9 +44,18 @@ object Intro extends IOApp:
       } { _ => IO.unit }
 
   def writeAllInstructorExample[A](xs: List[A], file: File)(using encoder: RowEncoder[A]): IO[Unit] =
-    val content                           = xs.map(encoder.encode(_)).mkString("\n")
-    def use(fw: FileWriter): IO[Unit]     = IO.blocking(fw.write(content)) *> IO.blocking(fw.flush())
-    def release(fw: FileWriter): IO[Unit] = IO.blocking(fw.close())
+    val content = xs.map(encoder.encode(_)).mkString("\n")
+
+    def use(fw: FileWriter): IO[Unit] =
+      IO.println("Writing content...") *>
+        IO.blocking(fw.write(content)) *>
+        IO.raiseError(new Exception("Failed writing...")) *>
+        IO.println("Flushing resources...") *>
+        IO.blocking(fw.flush())
+
+    def release(fw: FileWriter): IO[Unit] =
+      IO.println("Closing resources...") *>
+        IO.blocking(fw.close())
 
     IO.blocking(new FileWriter(file)).bracket(use)(release)
 
