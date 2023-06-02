@@ -24,7 +24,7 @@ object MemoizationExercise extends IOApp:
       case Currency.Euro   => 1.12
 
   def fetchDollarExchangeRateIO(currency: Currency): IO[Double] =
-    IO.sleep(5000.millis) *> IO.println("Fetch exchange rate...") *> IO {
+    IO.sleep(5000.millis) *> IO.println("Fetch exchange rate...") *> IO.pure {
       currency match
         case Currency.Dollar => 1.0
         case Currency.Euro   => 1.12
@@ -43,12 +43,12 @@ object MemoizationExercise extends IOApp:
 
   def getBalanceInDollarsIO(balances: List[Balance]): IO[List[Double]] =
     euroExchangeRateMemoizeIO.flatMap { euroExchangeRateIO =>
-      balances.map { balance =>
+      balances.traverse { balance =>
         balance.currency match
           case Currency.Dollar => balance.amount.pure[IO]
           case Currency.Euro =>
             euroExchangeRateIO.map { _ * balance.amount }
-      }.sequence
+      }
     }
 
     // TODO: Wrong. In this case we fetched exchange rate two times.
