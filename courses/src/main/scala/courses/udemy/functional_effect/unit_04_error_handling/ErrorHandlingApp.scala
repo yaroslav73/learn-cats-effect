@@ -1,4 +1,4 @@
-package courses.udemy.functional_effect.section_04
+package courses.udemy.functional_effect.unit_04_error_handling
 
 import cats._
 import cats.data.ValidatedNec

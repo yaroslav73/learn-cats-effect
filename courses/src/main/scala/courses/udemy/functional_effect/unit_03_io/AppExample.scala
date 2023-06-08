@@ -1,4 +1,4 @@
-package courses.udemy.functional_effect.section_03
+package courses.udemy.functional_effect.unit_03_io
 
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global

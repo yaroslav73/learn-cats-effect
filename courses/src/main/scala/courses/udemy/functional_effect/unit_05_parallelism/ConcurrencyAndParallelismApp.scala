@@ -1,4 +1,4 @@
-package courses.udemy.functional_effect.section_05_parallelism
+package courses.udemy.functional_effect.unit_05_parallelism
 
 import cats.effect.IOApp
 import cats.effect.ExitCode
