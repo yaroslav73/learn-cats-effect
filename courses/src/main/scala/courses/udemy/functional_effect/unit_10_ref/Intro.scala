@@ -1,4 +1,4 @@
-package courses.udemy.functional_effect.unit_10_concurrent_state_refs
+package courses.udemy.functional_effect.unit_10_ref
 
 import cats.effect.IOApp
 import cats.effect.ExitCode
