@@ -3,7 +3,7 @@ name := "learn-cats"
 version := "0.1"
 
 val scala3Version    = "3.2.2"
-val scala2Version    = "2.13.7"
+val scala2Version    = "2.13.11"
 val ce2Version       = "2.5.3"
 val ce3Version       = "3.4.10"
 val scalaTestVersion = "3.2.12"
