@@ -1,7 +1,10 @@
-import scala.concurrent.Future
+package docs
+
 import cats.effect.IO
 
-object _01_Introduction {
+import scala.concurrent.Future
+
+object _01_Introduction:
   // An IO is a data structure that represents just a description
   // of a side effectful computation.
 
@@ -29,7 +32,7 @@ object _01_Introduction {
   }
 
   // unsafeRunSync() need implicit IORuntime, so we import it
-  import cats.effect.unsafe.implicits.global
+  // import cats.effect.unsafe.implicits.global - DON'T NEED IN CE2
 
   def addToIO(n: Int): IO[Int] = IO {
     println(s"[IO] Add $n to 1")
@@ -47,7 +50,7 @@ object _01_Introduction {
       else IO.pure(a)
     }
 
-  @main def runExamples01(): Unit =
+  @main def runExample01(): Unit =
     // firstIOProgram, doesn't execute until we run it with unsafeRun... methodss
     firstIOProgram.unsafeRunSync()
 
@@ -79,5 +82,4 @@ object _01_Introduction {
 
     tasks.unsafeRunSync()
 
-    fib(7).flatMap(IO.println).unsafeRunSync()
-}
+    fib(7).flatMap(n => IO(println(n))).unsafeRunSync()

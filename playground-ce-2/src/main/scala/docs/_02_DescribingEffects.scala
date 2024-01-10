@@ -1,15 +1,15 @@
-import cats.effect.IO
+package docs
 
-import cats.effect.unsafe.implicits.global
+import cats.effect.{ContextShift, IO}
+
+import scala.concurrent.ExecutionContext
+//import cats.effect.unsafe.implicits.global
+
+import java.util.concurrent.{Executors, ScheduledExecutorService}
 import scala.concurrent.Future
-import scala.util.Failure
-import scala.util.Success
-import scala.util.Random
-import scala.concurrent.duration.DurationInt
-import scala.concurrent.duration.FiniteDuration
-import java.util.concurrent.ScheduledExecutorService
-import java.util.concurrent.Executors
-import cats.effect.kernel.GenSpawn
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
+import scala.util.{Failure, Random, Success}
+//import cats.effect.kernel.{Async, GenSpawn}
 
 object _02_DescribingEffects:
   // IO is a potent abstraction that can efficiently describe multiple kinds of effects:
@@ -42,7 +42,7 @@ object _02_DescribingEffects:
   import concurrent.ExecutionContext.Implicits.global
 
   def asyncCall[A](body: => Future[A]): IO[A] =
-    IO.async_ { cb =>
+    IO.async { cb =>
       println(s"Compute async_ on ${Thread.currentThread.getName}")
       body.onComplete {
         case Success(value) =>
@@ -58,15 +58,13 @@ object _02_DescribingEffects:
   // Important: cancellation is the ability to interrupt an IO task before completion,
   // possibly releasing any acquired resources, useful in race conditions to prevent leaks.
   def delayTick(d: FiniteDuration)(using sc: ScheduledExecutorService): IO[Unit] =
-    IO.async { cb =>
-      IO {
-        val r = new Runnable { def run() = cb(Right(())) }
-        val f = sc.schedule(r, d.length, d.unit)
+    IO.cancelable { cb =>
+      val r = new Runnable { def run() = cb(Right(())) }
+      val f = sc.schedule(r, d.length, d.unit)
 
-        // Returning the cancellation token needed to cancel
-        // the scheduling and release resources early
-        Some(IO(f.cancel(true)) *> IO.println("Cancellation")) // TODO: What if I just wrap Some in IO?
-      }
+      // Returning the cancellation token needed to cancel
+      // the scheduling and release resources early
+      IO(f.cancel(false)).void
     }
 
   // IO.never
@@ -84,15 +82,16 @@ object _02_DescribingEffects:
       else IO.pure(a)
     }
 
-  def fibConcurrent(n: Int, a: Long, b: Long): IO[Long] =
+  import DebugHelper.debug
+  def fibConcurrent(n: Int, a: Long, b: Long)(using cs: ContextShift[IO]): IO[Long] =
     IO.defer {
       if n == 0 then IO.pure(a)
       else
         val next = fib(n - 1, b, a + b)
         // Every 100 cycles, introduce a logical thread fork
         // TODO: For now I don't understand how IO.cede works :/ Need to learn more.
-        if n % 100 == 0 then IO.cede.debug(s"${Thread.currentThread.getName}") *> next
-        else next // .debug(s"${Thread.currentThread.getName}")
+        if n % 100 == 0 then cs.shift.debug *> next
+        else next.debug // .debug(s"${Thread.currentThread.getName}")
     }
 
   def fibNotSafe(n: Int, a: Long, b: Long): IO[Long] =
@@ -111,18 +110,20 @@ object _02_DescribingEffects:
     asyncCall(futureSuccess).map(println).unsafeRunSync()
     asyncCall(futureFailure).map(println).unsafeRunSync()
 
-  @main def runExmaple05(): Unit =
+  @main def runExample05(): Unit =
     given sc: ScheduledExecutorService = Executors.newScheduledThreadPool(1)
     delayTick(5.seconds).unsafeRunSync()
 
   @main def runExample06(): Unit =
-    fibConcurrent(1000, 0, 1).flatMap(IO.println).unsafeRunSync() // Async(_ => ())
+    implicit val cs: ContextShift[IO] = IO.contextShift(ExecutionContext.global)
+    fibConcurrent(1000, 0, 1).flatMap(n => IO(println(n))).unsafeRunSync() // Async(_ => ())
 
-  @main def checkIterateWhile(): Unit =
-    IO(Random.nextInt(15))
-      .iterateWhile { n =>
-        println(n)
-        n != 10
-      }
-      .map(println)
-      .unsafeRunSync()
+// TODO: iterateWhile does not exit in CE2?
+//  @main def checkIterateWhile(): Unit =
+//    IO(Random.nextInt(15))
+//      .iterateWhile { n =>
+//        println(n)
+//        n != 10
+//      }
+//      .map(println)
+//      .unsafeRunSync()
