@@ -9,6 +9,7 @@ val ce3Version       = "3.4.10"
 val ceLaws2Version   = "2.5.5"
 val ceLaws3Version   = "3.5.2"
 val scalaTestVersion = "3.2.12"
+val ce2Weaver        = "0.6.15"
 
 lazy val books = project
   .in(file("books"))
@@ -35,9 +36,10 @@ lazy val playgroundCE2 = project
   .settings(
     scalaVersion := scala3Version,
     libraryDependencies ++= Seq(
-      "org.typelevel" %% "cats-effect"      % ce2Version,
-      "org.typelevel" %% "cats-effect-laws" % ceLaws2Version   % Test,
-      "org.scalatest" %% "scalatest"        % scalaTestVersion % Test
+      "org.typelevel"       %% "cats-effect"      % ce2Version,
+      "org.typelevel"       %% "cats-effect-laws" % ceLaws2Version   % Test,
+      "org.scalatest"       %% "scalatest"        % scalaTestVersion % Test,
+      "com.disneystreaming" %% "weaver-cats"      % ce2Weaver        % Test
     )
   )
 
