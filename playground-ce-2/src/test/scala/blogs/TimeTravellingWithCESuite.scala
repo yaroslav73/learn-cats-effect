@@ -15,9 +15,8 @@ import scala.util.{Failure, Success}
 class TimeTravellingWithCESuite extends AsyncFlatSpec with Matchers with ScalaFutures:
   import cats.effect.laws.util.TestContext
 
-  implicit lazy val testCtx: TestContext = TestContext.apply()
-  implicit lazy val cs: ContextShift[IO] = IO.contextShift(testCtx)
-  implicit lazy val ioTimer: Timer[IO]   = testCtx.timer[IO]
+  implicit val testCtx: TestContext = TestContext()
+  implicit val ioTimer: Timer[IO]   = testCtx.timer[IO]
 
   // Default configuration is set to 3s for timeouts
   // and 1s to wait between retries, with max retries = 5
@@ -67,7 +66,6 @@ class TimeTravellingWithCESuite extends AsyncFlatSpec with Matchers with ScalaFu
 
   it should "test example from documentation" in {
     // Can now simulate time
-    // IO.timer(testCtx).sleep(10.seconds) - doesn't work
     val io = ioTimer.sleep(10.seconds) *> IO(1 + 1)
     val f  = io.unsafeToFuture()
 
@@ -79,8 +77,39 @@ class TimeTravellingWithCESuite extends AsyncFlatSpec with Matchers with ScalaFu
     f.value.isEmpty shouldBe true
 
     // Simulating time passing:
-    testCtx.tick(11.seconds)
+    testCtx.tick(10.seconds)
     f.futureValue shouldBe 2
+  }
+
+  final case class Service1(timer: Timer[IO]) {
+    def call(): IO[Unit] = timer.sleep(10.seconds) *> IO(println("Service1 called"))
+  }
+  object Service1 {
+    def make(timer: Timer[IO]) =
+      // IO.sleep(2.seconds) *>
+      IO(new Service1(timer))
+  }
+
+  final case class Service2() {
+    def call(): IO[Unit] = IO(println("Service2 called"))
+  }
+  object Service2 {
+    def make() = IO(new Service2())
+  }
+
+  it should "custome example" ignore {
+    val io = for {
+      s1 <- Service1.make(ioTimer)
+      s2 <- Service2.make()
+      _  <- ioTimer.sleep(10.seconds)
+      _  <- s2.call()
+      _  <- s1.call()
+    } yield 2
+    val f = io.unsafeToFuture()
+
+    testCtx.tick(10.seconds)
+    testCtx.tick(10.seconds)
+    f.map(_ shouldBe 2)
   }
 
   it should "succeed when it finishes shortly before the timeout" in {
