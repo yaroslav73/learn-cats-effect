@@ -1,6 +1,6 @@
 package docs
 
-import cats.effect.{ContextShift, IO}
+import cats.effect.{ContextShift, IO, Timer}
 
 import scala.concurrent.ExecutionContext
 //import cats.effect.unsafe.implicits.global
@@ -20,6 +20,7 @@ object _02_DescribingEffects:
   val unit = IO.unit
 
   // 2. Synchronous Effects — IO.apply
+  // Describing IO operations that can be evaluated immediately, on the current thread and call-stack.
   // Note the given parameter is passed ''by name'', its execution being "suspended" in the IO context.
   def putStrLn(s: String) = IO(println(s))
   val readLn              = IO(scala.io.StdIn.readLine())
@@ -59,12 +60,12 @@ object _02_DescribingEffects:
   // possibly releasing any acquired resources, useful in race conditions to prevent leaks.
   def delayTick(d: FiniteDuration)(using sc: ScheduledExecutorService): IO[Unit] =
     IO.cancelable { cb =>
-      val r = new Runnable { def run() = cb(Right(())) }
+      val r = new Runnable { def run() = cb(Right(println("callback"))) }
       val f = sc.schedule(r, d.length, d.unit)
 
       // Returning the cancellation token needed to cancel
       // the scheduling and release resources early
-      IO(f.cancel(false)).void
+      IO(f.cancel(false)).flatMap(_ => IO(println("task cancelled")))
     }
 
   // IO.never
@@ -74,7 +75,8 @@ object _02_DescribingEffects:
 
   // 4. Deferred Execution — IO.defer (previously suspend)
   // It's also useful for modeling stack safe, tail recursive loops:
-  val defereTen = IO.defer(IO(10)) // The same as IO(???).flatten
+  val ioIoTen  = IO(IO(println(10)))
+  val deferTen = IO.defer(IO(println(10))) // The same as IO(???).flatten
 
   def fib(n: Int, a: Long, b: Long): IO[Long] =
     IO.defer {
@@ -87,11 +89,12 @@ object _02_DescribingEffects:
     IO.defer {
       if n == 0 then IO.pure(a)
       else
-        val next = fib(n - 1, b, a + b)
+        val next = fibConcurrent(n - 1, b, a + b)
         // Every 100 cycles, introduce a logical thread fork
-        // TODO: For now I don't understand how IO.cede works :/ Need to learn more.
+        // The fibConcurrent will be executed on the same thread, 
+        // but on a different logical thread which will be shifted every 100 cycles
         if n % 100 == 0 then cs.shift.debug *> next
-        else next.debug // .debug(s"${Thread.currentThread.getName}")
+        else next
     }
 
   def fibNotSafe(n: Int, a: Long, b: Long): IO[Long] =
@@ -111,11 +114,23 @@ object _02_DescribingEffects:
     asyncCall(futureFailure).map(println).unsafeRunSync()
 
   @main def runExample05(): Unit =
-    given sc: ScheduledExecutorService = Executors.newScheduledThreadPool(1)
-    delayTick(5.seconds).unsafeRunSync()
+    given sc: ScheduledExecutorService = Executors.newScheduledThreadPool(2)
+    given cs: ContextShift[IO]         = IO.contextShift(ExecutionContext.global)
+    given timer: Timer[IO]             = IO.timer(ExecutionContext.global)
+    val program = for {
+      task <- delayTick(5.seconds).start
+      // If task already completed there is no cancellation
+      _ <- (IO.sleep(4.seconds) *> task.cancel).start
+    } yield ()
+    program.unsafeRunSync()
 
-  @main def runExample06(): Unit =
-    implicit val cs: ContextShift[IO] = IO.contextShift(ExecutionContext.global)
+  @main def runExample06_0(): Unit =
+    ioIoTen.unsafeRunSync()  // 10 was not printed
+    deferTen.unsafeRunSync() // 10 was printed
+
+  @main def runExample06_1(): Unit =
+    given cs: ContextShift[IO] = IO.contextShift(ExecutionContext.fromExecutorService(Executors.newCachedThreadPool()))
+//    implicit val cs: ContextShift[IO] = IO.contextShift(ExecutionContext.global)
     fibConcurrent(1000, 0, 1).flatMap(n => IO(println(n))).unsafeRunSync() // Async(_ => ())
 
 // TODO: iterateWhile does not exit in CE2?
